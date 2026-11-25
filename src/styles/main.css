@@ -18,6 +18,7 @@
   --beak: #43464c;
   --cere: #e0b43a;
   --iris: #e6a81e;
+  --tooth: #f6f1e4;
   --pigeon: #9aa1ab;
   --pigeon-dark: #69717e;
   --pigeon-iris: #e8742a;
@@ -819,6 +820,10 @@ figcaption {
   background-image: radial-gradient(var(--rule) 1px, transparent 1.2px);
   background-size: 14px 14px;
   transition: opacity 0.45s ease;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 .wake.is-leaving {

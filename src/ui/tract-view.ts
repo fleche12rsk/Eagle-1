@@ -54,6 +54,7 @@ export class TractView {
   private colors = {
     flesh: '#a8392a', fleshSoft: '#d98b73', cavity: '#3a1f1b', ink: '#211c17', ink2: '#5a5047', paper: '#f1ebe0',
     feather: '#b5824c', featherDark: '#5e3b22', featherLight: '#ead7b8', beak: '#3f4248', cere: '#e0b43a', iris: '#e2a51c',
+    tooth: '#f6f1e4',
     pigeon: '#9aa1ab', pigeonDark: '#6b7380', pigeonIris: '#e8742a', pigeonCere: '#f1ece4', sheenA: '#3f8f6b', sheenB: '#7c4f93',
   };
   private creature: CreatureId = 'humano';
@@ -62,6 +63,10 @@ export class TractView {
   private sacSize = 0;
   private sacPos = 0.3;
   private sacShown = 0;
+  /** Tamanho dos dentes (0..1) e quanto deles está à mostra agora. */
+  private teeth = 0;
+  private teethTarget = 0;
+  private teethShown = 0;
   private jawOpen = 0.5;
   private beakShown = 0.5;
   private morph = 0;
@@ -90,6 +95,7 @@ export class TractView {
       beak: v('--beak', this.colors.beak),
       cere: v('--cere', this.colors.cere),
       iris: v('--iris', this.colors.iris),
+      tooth: v('--tooth', this.colors.tooth),
       pigeon: v('--pigeon', this.colors.pigeon),
       pigeonDark: v('--pigeon-dark', this.colors.pigeonDark),
       pigeonIris: v('--pigeon-iris', this.colors.pigeonIris),
@@ -111,6 +117,10 @@ export class TractView {
   setShape(a: AnatomyShape): void {
     computeDiameters(a, this.target);
     this.jawOpen = Math.min(1, a.jaw * 0.6 + a.lipOpen * 0.4);
+    this.teeth = a.teeth ?? 0;
+    // Os lábios cobrem os dentes; eles aparecem quando a boca abre.
+    const t = Math.min(1, Math.max(0, (a.lipOpen - 0.15) / 0.4));
+    this.teethTarget = this.teeth * t * t * (3 - 2 * t);
   }
 
   setCreature(id: CreatureId): void {
@@ -279,6 +289,41 @@ export class TractView {
     ctx.strokeStyle = c.ink;
     ctx.lineWidth = 1.5;
     ctx.stroke();
+
+    // Dentes humanos: incisivos na frente e dois pré-molares atrás.
+    this.teethShown += (this.teethTarget - this.teethShown) * (still ? 1 : 0.2);
+    const toothShow = this.teethShown * (1 - bird);
+    if (toothShow > 0.02) {
+      const seg = scale / N;
+      const tooth = (i: number, side: 1 | -1, lenFrac: number, w0: number, w1: number) => {
+        const [x, y] = inner(i, side);
+        const half = Math.max(this.shown[i], 0) * 0.5 * unit;
+        const len = Math.min(half * 0.8, half * 1.25 * lenFrac * toothShow);
+        const dir = side === 1 ? 1 : -1; // de cima para baixo ou de baixo para cima
+        const r = Math.min(seg * 0.35, len * 0.5);
+        ctx.beginPath();
+        ctx.moveTo(x - seg * w0, y);
+        ctx.lineTo(x - seg * w0, y + dir * (len - r));
+        ctx.quadraticCurveTo(x - seg * w0, y + dir * len, x - seg * w0 + r, y + dir * len);
+        ctx.lineTo(x + seg * w1 - r, y + dir * len);
+        ctx.quadraticCurveTo(x + seg * w1, y + dir * len, x + seg * w1, y + dir * (len - r));
+        ctx.lineTo(x + seg * w1, y);
+        ctx.fill();
+        ctx.stroke();
+      };
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, toothShow * 1.6);
+      ctx.fillStyle = c.tooth;
+      ctx.strokeStyle = c.ink;
+      ctx.lineWidth = 1;
+      tooth(N - 8, 1, 0.55, 0.6, 0.6);
+      tooth(N - 8, -1, 0.5, 0.6, 0.6);
+      tooth(N - 6, 1, 0.65, 0.7, 0.7);
+      tooth(N - 6, -1, 0.6, 0.7, 0.7);
+      tooth(N - 4, -1, 0.85, 0.5, 0.9);
+      tooth(N - 4, 1, 1, 0.3, 1.5);
+      ctx.restore();
+    }
 
     // Pregas vocais: vibram quando há som.
     const g = this.pts[0];
@@ -559,6 +604,45 @@ export class TractView {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+
+    // Dentes no bico (ave mutante): serrilhado que só aparece com o bico aberto.
+    const o = Math.min(1, Math.max(0, (open - 0.08) / 0.3));
+    const beakTeeth = this.teeth * o;
+    if (beakTeeth > 0.02) {
+      const size = (0.01 + 0.022 * this.teeth) * s;
+      const row = (x0: number, y0: number, x1: number, y1: number, up: boolean, count: number) => {
+        const dx = x1 - x0;
+        const dy = y1 - y0;
+        const L = Math.hypot(dx, dy) || 1;
+        const nx = (up ? dy : -dy) / L;
+        const ny = (up ? -dx : dx) / L;
+        const w = L / count;
+        for (let k = 0; k < count; k++) {
+          const f0 = k / count;
+          const ax = x0 + dx * f0;
+          const ay = y0 + dy * f0;
+          const bx = ax + (dx / count);
+          const by = ay + (dy / count);
+          const h = size * (0.75 + 0.5 * Math.sin(k * 2.3 + 1)) * (k === 0 ? 0.7 : 1);
+          ctx.beginPath();
+          ctx.moveTo(ax, ay);
+          ctx.lineTo((ax + bx) / 2 + nx * h + (dx / L) * w * 0.15, (ay + by) / 2 + ny * h + (dy / L) * w * 0.15);
+          ctx.lineTo(bx, by);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+      };
+      ctx.save();
+      ctx.globalAlpha *= Math.min(1, beakTeeth * 1.8);
+      ctx.fillStyle = c.tooth;
+      ctx.strokeStyle = c.ink;
+      ctx.lineWidth = 1;
+      const upEnd = tip.x - 0.05 * s * st.hook - 0.01 * s;
+      row(lip.x + 0.012 * s, gapTop, upEnd, gapTop + 0.005 * s, false, Math.max(3, Math.round((upEnd - lip.x) / (0.03 * s))));
+      row(lip.x + 0.012 * s, gapBot + 0.002 * s, lowTip.x - 0.015 * s, lowTip.y - 0.004 * s, true, Math.max(3, Math.round(lowLen / (0.032 * s))));
+      ctx.restore();
+    }
 
     // Cera na base (amarela no gavião, branca e carnuda no pombo), com a narina.
     ctx.fillStyle = c[st.cere];

@@ -1,6 +1,6 @@
 import './styles/main.css';
 import { CREATURES, creatureNormalized, type CreatureId } from './dsp/creatures';
-import { GROUP_LABELS, PARAM_INDEX, PARAMS, VOWELS, toNormalized, toPhysical, type ParamGroup, type ParamId } from './dsp/params';
+import { GROUP_LABELS, PARAM_INDEX, PARAMS, VOWELS, toNormalized, toPhysical, type ParamGroup, type ParamId, type VowelShape } from './dsp/params';
 import type { AnatomyShape } from './dsp/shape';
 import type { AudioBridge } from './audio';
 import './ui/knob';
@@ -31,6 +31,7 @@ const anatomy = (): AnatomyShape => ({
   lipOpen: phys('lipOpen'),
   lipProtrusion: phys('lipProtrusion'),
   lipWidth: phys('lipWidth'),
+  teeth: phys('teeth'),
 });
 
 // ---------- Painéis de knobs, gerados a partir das definições ----------
@@ -70,7 +71,7 @@ function setParam(index: number, value: number, updateKnob = true): void {
   bridge?.send({ t: 'param', i: index, v: value });
   const id = PARAMS[index].id;
   if (id === 'tonguePos' || id === 'tongueHeight') pad.set(phys('tonguePos'), phys('tongueHeight'));
-  if (index >= PARAM_INDEX.tonguePos && index <= PARAM_INDEX.lipWidth) {
+  if (index >= PARAM_INDEX.tonguePos && index <= PARAM_INDEX.teeth) {
     view.setShape(anatomy());
     markVowel();
   }
@@ -88,7 +89,7 @@ function setPhysical(id: ParamId, v: number): void {
 let vowelAnim = 0;
 function goToVowel(name: keyof typeof VOWELS): void {
   const target = VOWELS[name];
-  const ids = Object.keys(target) as (keyof AnatomyShape)[];
+  const ids = Object.keys(target) as (keyof VowelShape)[];
   const from = ids.map((id) => phys(id));
   const t0 = performance.now();
   const dur = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 120;
@@ -106,7 +107,7 @@ function markVowel(): void {
   const a = anatomy();
   for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-vowel]')) {
     const v = VOWELS[btn.dataset.vowel as keyof typeof VOWELS];
-    const close = (Object.keys(v) as (keyof AnatomyShape)[]).every((k) => Math.abs(v[k] - a[k]) < 0.02);
+    const close = (Object.keys(v) as (keyof VowelShape)[]).every((k) => Math.abs(v[k] - a[k]) < 0.02);
     btn.setAttribute('aria-pressed', String(close));
   }
 }

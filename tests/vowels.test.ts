@@ -14,8 +14,8 @@ const REF = {
 
 describe('vogais', () => {
   for (const [name, shape] of Object.entries(VOWELS) as [keyof typeof REF, (typeof VOWELS)['A']][]) {
-    test(`${name}: F1 e F2 perto da referência`, () => {
-      const f = formants(shape);
+    test(`${name}: F1 e F2 perto da referência (com dentes)`, () => {
+      const f = formants({ ...shape, teeth: 0.6 });
       const ref = REF[name];
       expect(f[0]).toBeGreaterThan(ref.f1[0]);
       expect(f[0]).toBeLessThan(ref.f1[1]);
@@ -58,7 +58,7 @@ describe('vogais', () => {
     const out = new Float32Array(44);
     for (let i = 0; i < 500; i++) {
       const r = () => Math.random();
-      computeDiameters({ tonguePos: r(), tongueHeight: r(), jaw: r(), lipOpen: r(), lipProtrusion: r(), lipWidth: r() }, out);
+      computeDiameters({ tonguePos: r(), tongueHeight: r(), jaw: r(), lipOpen: r(), lipProtrusion: r(), lipWidth: r(), teeth: r() }, out);
       for (let k = 0; k < 38; k++) {
         expect(Number.isFinite(out[k])).toBe(true);
         expect(out[k]).toBeGreaterThan(0);

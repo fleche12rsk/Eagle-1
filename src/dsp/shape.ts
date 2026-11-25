@@ -13,6 +13,7 @@ export interface AnatomyShape {
   lipOpen: number; // 0 = fechados .. 1 = abertos
   lipProtrusion: number; // 0 = neutro .. 1 = bico
   lipWidth: number; // 0 = estreito .. 1 = sorriso
+  teeth?: number; // 0 = sem dentes .. 1 = dentes grandes
 }
 
 /** Limites das regiões, em fração do comprimento do trato. */
@@ -78,6 +79,13 @@ export function computeDiameters(a: AnatomyShape, out: Float32Array): Float32Arr
     if (x >= REGIONS.larynxEnd && x < lipStart) {
       const b = bell(x, c, w);
       if (b > 0 && d > constriction) d = d - (d - constriction) * b;
+    }
+
+    // Dentes: logo atrás dos lábios, estreitam a passagem quando a mandíbula fecha.
+    const teeth = a.teeth ?? 0;
+    if (teeth > 0 && x < lipStart && x >= lipStart - 1.5 / n) {
+      const gap = 0.12 + 1.9 * jaw;
+      if (d > gap) d -= (d - gap) * teeth * 0.6;
     }
 
     // Lábios.

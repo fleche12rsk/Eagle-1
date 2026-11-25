@@ -43,7 +43,7 @@ export class Engine {
     this.vp = {
       fineTune: 0, transpose: 0, fry: 0, tractLength: 1, pitchAmt: 0, pitchAtk: 0.05, pitchDec: 0.5, pitchSus: 0, sacSize: 0, sacElastic: 0.5, sacDamp: 0.4, sacPos: 0.3, sacCouple: 0.6, rd: 1, aspiration: 0, jitter: 0, shimmer: 0, vibRate: 0, vibDepth: 0, vibDelay: 0,
       attack: 0.01, decay: 0.1, sustain: 1, release: 0.1, glide: 0,
-      tonguePos: 0.5, tongueHeight: 0.5, jaw: 0.5, lipOpen: 0.5, lipProtrusion: 0, lipWidth: 0.5,
+      tonguePos: 0.5, tongueHeight: 0.5, jaw: 0.5, lipOpen: 0.5, lipProtrusion: 0, lipWidth: 0.5, teeth: 0,
     };
     this.updatePhysical();
     this.voice.setAnatomy(this.vp);
@@ -103,7 +103,7 @@ export class Engine {
       const d = this.target[i] - this.current[i];
       if (d !== 0) {
         this.current[i] = Math.abs(d) < 1e-5 ? this.target[i] : this.current[i] + d * coef;
-        if (i >= P.tonguePos && i <= P.lipWidth) this.anatomyDirty = true;
+        if (i >= P.tonguePos && i <= P.teeth) this.anatomyDirty = true;
       }
     }
     this.updatePhysical();
@@ -139,6 +139,7 @@ export class Engine {
     v.lipOpen = ph(P.lipOpen);
     v.lipProtrusion = ph(P.lipProtrusion);
     v.lipWidth = ph(P.lipWidth);
+    v.teeth = ph(P.teeth);
     v.attack = ph(P.attack);
     v.decay = ph(P.decay);
     v.sustain = ph(P.sustain);
