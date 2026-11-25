@@ -7,7 +7,7 @@ import { Glottis } from './glottis';
 import { VocalSac, type SacParams } from './sac';
 import { computeDiameters, stretchedLength, type AnatomyShape } from './shape';
 import { Tract, type TractParams } from './tract';
-import { Rng, SmoothNoise, midiToHz } from './util';
+import { Bandpass, Rng, SmoothNoise, midiToHz } from './util';
 
 export const OVERSAMPLE = 2;
 export const DEFAULT_SEGMENTS = 44;
@@ -72,6 +72,14 @@ export class Voice {
   private anatomy: AnatomyShape | null = null;
   /** Nível de saída recente (para a interface). */
   level = 0;
+  /** Ruído de constrição (consoantes do beatbox), injetado no ponto mais estreito do tubo. */
+  private noiseEnv = 0;
+  private noiseDecay = 0.999;
+  private noiseGain = 0;
+  private noiseJ = 4;
+  private readonly noiseBp = new Bandpass();
+  private readonly noiseRng = new Rng(0x51ed270b);
+  private prevExt = 0;
 
   constructor(private readonly fs: number, seed = 1, segments = DEFAULT_SEGMENTS) {
     this.rateInt = fs * OVERSAMPLE;
@@ -83,6 +91,30 @@ export class Voice {
 
   get active(): boolean {
     return this.stage !== Stage.Idle;
+  }
+
+  get idle(): boolean {
+    return this.stage === Stage.Idle;
+  }
+
+  /** Muda a altura sem reiniciar a nota (para cantar uma melodia contínua). */
+  setHz(hz: number): void {
+    if (hz > 20 && hz < 4000) this.logFTarget = Math.log2(hz);
+  }
+
+  setVelocity(v: number): void {
+    this.velocity = v;
+  }
+
+  /**
+   * Dispara um sopro de consoante: ruído filtrado que entra no ponto mais
+   * estreito do tubo e decai em `tau` segundos.
+   */
+  startNoise(gain: number, tau: number, hz: number, q: number): void {
+    this.noiseGain = gain;
+    this.noiseEnv = 1;
+    this.noiseDecay = Math.exp(-1 / (tau * this.rateInt));
+    this.noiseBp.set(hz, q, this.rateInt);
   }
 
   get releasing(): boolean {
@@ -164,11 +196,21 @@ export class Voice {
    * Renderiza `frames` amostras somando em `out`.
    * @param shapeCoef suavização dos diâmetros neste bloco
    */
-  render(out: Float32Array, offset: number, frames: number, p: VoiceParams, shapeCoef: number): void {
-    if (this.stage === Stage.Idle) {
+  render(
+    out: Float32Array,
+    offset: number,
+    frames: number,
+    p: VoiceParams,
+    shapeCoef: number,
+    ext: Float32Array | null = null,
+    extMix = 0,
+    extGain = 1,
+  ): void {
+    if (this.stage === Stage.Idle && this.noiseEnv < 1e-4) {
       this.level *= 0.9;
       return;
     }
+    const useExt = ext !== null && extMix > 0.001;
     const fs = this.fs;
     const tract = this.tract;
     if (this.needsLength) {
@@ -200,6 +242,18 @@ export class Voice {
     const glottis = this.glottis;
     const amp = 0.35 + 0.65 * this.velocity;
     let peak = 0;
+
+    // Ponto mais estreito do tubo: onde nasce o ruído das consoantes.
+    if (this.noiseEnv > 1e-4) {
+      let best = 1e9;
+      for (let k = 3; k < tract.n - 4; k++) {
+        const d = tract.diameter[k];
+        if (d < best) {
+          best = d;
+          this.noiseJ = k;
+        }
+      }
+    }
 
     for (let s = 0; s < frames; s++) {
       // Envelope de amplitude.
@@ -271,21 +325,39 @@ export class Voice {
       tract.advance();
 
       // Oversampling 2x: duas passadas no tubo, média simples como decimação.
-      const g1 = glottis.next(freq, p);
+      const voiced = this.stage !== Stage.Idle;
+      let g1 = voiced ? glottis.next(freq, p) : 0;
+      if (useExt) {
+        const e0 = 0.5 * (this.prevExt + ext![s]);
+        g1 = g1 * (1 - extMix) + e0 * extGain * extMix;
+      }
+      if (this.noiseEnv > 1e-4) {
+        tract.inject(this.noiseJ, this.noiseBp.process(this.noiseRng.bipolar()) * this.noiseEnv * this.noiseGain);
+        this.noiseEnv *= this.noiseDecay;
+      }
       let y1 = tract.step(g1, tp);
       if (sacOn) {
         const sv = sac.process(tract.pressureAt(sacJ));
         tract.inject(sacJ, -sacFb * (sv > 1 ? 1 : sv < -1 ? -1 : sv));
         y1 += sacRad * sv;
       }
-      const g2 = glottis.next(freq, p);
+      let g2 = voiced ? glottis.next(freq, p) : 0;
+      if (useExt) {
+        const e1 = ext![s];
+        g2 = g2 * (1 - extMix) + e1 * extGain * extMix;
+        this.prevExt = e1;
+      }
+      if (this.noiseEnv > 1e-4) {
+        tract.inject(this.noiseJ, this.noiseBp.process(this.noiseRng.bipolar()) * this.noiseEnv * this.noiseGain);
+        this.noiseEnv *= this.noiseDecay;
+      }
       let y2 = tract.step(g2, tp);
       if (sacOn) {
         const sv = sac.process(tract.pressureAt(sacJ));
         tract.inject(sacJ, -sacFb * (sv > 1 ? 1 : sv < -1 ? -1 : sv));
         y2 += sacRad * sv;
       }
-      const y = 0.5 * (y1 + y2) * this.env * this.stealGain * amp;
+      const y = 0.5 * (y1 + y2) * (voiced ? this.env * this.stealGain * amp : 1);
 
       out[offset + s] += y;
       const a = y < 0 ? -y : y;

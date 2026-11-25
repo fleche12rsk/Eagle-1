@@ -9,6 +9,21 @@ import { computeDiameters, stretchedLength, type AnatomyShape } from '../dsp/sha
 
 const N = 44;
 
+const BASE_COLORS = {
+  flesh: '#a8392a', fleshSoft: '#d98b73', cavity: '#3a1f1b', ink: '#211c17', ink2: '#5a5047', paper: '#f1ebe0',
+  feather: '#b5824c', featherDark: '#5e3b22', featherLight: '#ead7b8', beak: '#3f4248', cere: '#e0b43a', iris: '#e2a51c',
+  tooth: '#f6f1e4',
+  pigeon: '#9aa1ab', pigeonDark: '#6b7380', pigeonIris: '#e8742a', pigeonCere: '#f1ece4', sheenA: '#3f8f6b', sheenB: '#7c4f93',
+};
+type Palette = typeof BASE_COLORS;
+
+/** Paleta macabra: pele machucada, carne crua, osso amarelado, olhos mortos. */
+const MACABRE: Partial<Palette> = {
+  flesh: '#5e0f12', fleshSoft: '#9b4f4c', cavity: '#0b0305', tooth: '#d8cc94',
+  feather: '#4a3a30', featherDark: '#17110e', featherLight: '#8d8470', beak: '#2a2a28', cere: '#8a7a2e', iris: '#d6d04a',
+  pigeon: '#6c6f72', pigeonDark: '#2d2f33', pigeonIris: '#d9d6c2', pigeonCere: '#a9a08c', sheenA: '#5d7a4f', sheenB: '#5a3a57',
+};
+
 type BirdKind = 'gaviao' | 'pombo';
 
 /** Diferenças de desenho entre as aves. As cores vêm do CSS. */
@@ -51,13 +66,21 @@ export class TractView {
   private sounding = false;
   private t0 = performance.now();
   private readonly reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  private colors = {
-    flesh: '#a8392a', fleshSoft: '#d98b73', cavity: '#3a1f1b', ink: '#211c17', ink2: '#5a5047', paper: '#f1ebe0',
-    feather: '#b5824c', featherDark: '#5e3b22', featherLight: '#ead7b8', beak: '#3f4248', cere: '#e0b43a', iris: '#e2a51c',
-    tooth: '#f6f1e4',
-    pigeon: '#9aa1ab', pigeonDark: '#6b7380', pigeonIris: '#e8742a', pigeonCere: '#f1ece4', sheenA: '#3f8f6b', sheenB: '#7c4f93',
-  };
+  private colors: Palette = { ...BASE_COLORS };
   private creature: CreatureId = 'humano';
+  private macabre = true;
+  private mc: Palette = { ...BASE_COLORS, ...MACABRE };
+  private popups: { text: string; kind: number; t0: number }[] = [];
+  private lowBeakTip = { x: 0, y: 0 };
+  /** Veias fixas (sorteio determinístico) para o desenho não tremer a cada quadro. */
+  private readonly veinSeeds = Array.from({ length: 10 }, (_, k) => ({
+    i: 3 + ((k * 7) % 28),
+    side: (k % 2 ? 1 : -1) as 1 | -1,
+    off: 0.25 + ((k * 37) % 55) / 100,
+    wob: 0.6 + (k % 4) * 0.35,
+    ph: k * 1.7,
+    len: 7 + (k % 5) * 3,
+  }));
   /** Última ave escolhida: continua desenhada enquanto a transição some. */
   private birdKind: BirdKind = 'gaviao';
   private sacSize = 0;
@@ -106,6 +129,7 @@ export class TractView {
       sheenA: v('--sheen-a', this.colors.sheenA),
       sheenB: v('--sheen-b', this.colors.sheenB),
     };
+    this.mc = { ...this.colors, ...MACABRE };
   }
 
   private resize(): void {
@@ -125,6 +149,20 @@ export class TractView {
     // Os lábios cobrem os dentes; eles aparecem quando a boca abre.
     const t = Math.min(1, Math.max(0, (a.lipOpen - 0.15) / 0.4));
     this.teethTarget = this.teeth * t * t * (3 - 2 * t);
+  }
+
+  setMacabre(on: boolean): void {
+    this.macabre = on;
+  }
+
+  /** A palavra da batida ("pum", "kss", "ts") sobe da boca. */
+  hit(kind: number): void {
+    this.popups.push({ text: ['PUM', 'KSS', 'TS'][kind] ?? '!', kind, t0: performance.now() });
+    if (this.popups.length > 8) this.popups.shift();
+  }
+
+  private get pal(): Palette {
+    return this.macabre ? this.mc : this.colors;
   }
 
   setCreature(id: CreatureId): void {
@@ -176,7 +214,7 @@ export class TractView {
     const ctx = this.ctx;
     const { w, h, dpr } = this;
     if (w === 0 || h === 0) return;
-    const c = this.colors;
+    const c = this.pal;
     const still = this.reduced.matches;
     const t = (now - this.t0) / 1000;
 
@@ -269,17 +307,21 @@ export class TractView {
     ctx.strokeStyle = c.ink;
     ctx.stroke();
 
-    // Hachura de prancha antiga sobre a carne.
+    // Hachura de prancha antiga sobre a carne (ou, no modo macabro, fibras de músculo e veias).
     ctx.save();
     ctx.clip();
-    ctx.strokeStyle = c.flesh;
-    ctx.globalAlpha = 0.28;
-    ctx.lineWidth = 1;
-    for (let x = -h; x < w + h; x += 7) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x + h, h);
-      ctx.stroke();
+    if (this.macabre) {
+      this.drawMuscle(unit, wall, t, still);
+    } else {
+      ctx.strokeStyle = c.flesh;
+      ctx.globalAlpha = 0.28;
+      ctx.lineWidth = 1;
+      for (let x = -h; x < w + h; x += 7) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + h, h);
+        ctx.stroke();
+      }
     }
     ctx.restore();
 
@@ -299,6 +341,8 @@ export class TractView {
     ctx.strokeStyle = c.ink;
     ctx.lineWidth = 1.5;
     ctx.stroke();
+
+    if (this.macabre) this.drawStitchesAndUvula(outer, inner, unit, t, still, bird);
 
     // Dentes humanos: incisivos na frente e dois pré-molares atrás.
     this.teethShown += (this.teethTarget - this.teethShown) * (still ? 1 : 0.2);
@@ -418,6 +462,12 @@ export class TractView {
       ctx.globalAlpha = 1;
     }
 
+    if (this.macabre) {
+      const lower = bird > 0.5 ? this.lowBeakTip : { x: outer(N - 1, -1)[0], y: outer(N - 1, -1)[1] };
+      this.drawDrool(lower.x, lower.y, scale, Math.min(1, this.jawOpen * 1.4), t, still);
+      this.drawPopups(now, lip.x, lip.y, scale);
+    }
+
     // Rótulos com linhas de chamada.
     ctx.font = `italic ${Math.max(12, Math.min(15, w / 48))}px "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif`;
     ctx.fillStyle = c.ink2;
@@ -459,7 +509,7 @@ export class TractView {
     this.sacShown += (target - this.sacShown) * (still ? 1 : 0.15);
     if (this.sacShown < 0.02) return null;
     const ctx = this.ctx;
-    const c = this.colors;
+    const c = this.pal;
     const j = Math.min(N - 2, Math.max(2, Math.round(this.sacPos * (N - 1))));
     const p = this.pts[j];
     const d = Math.max(this.shown[j], 0) * 0.5 * unit + wall;
@@ -488,7 +538,11 @@ export class TractView {
 
     // Bolsa: pele esticada, com brilho iridescente no pombo.
     const g = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.1, cx, cy, r);
-    if (pigeon) {
+    if (this.macabre) {
+      g.addColorStop(0, '#c79aa4');
+      g.addColorStop(0.45, '#84506a');
+      g.addColorStop(1, '#3b1e33');
+    } else if (pigeon) {
       g.addColorStop(0, c.pigeonCere);
       g.addColorStop(0.35, c.sheenA);
       g.addColorStop(1, c.sheenB);
@@ -514,6 +568,34 @@ export class TractView {
       ctx.stroke();
     }
     ctx.restore();
+    if (this.macabre) {
+      // Veias que pulsam sob a pele esticada, e bolhas.
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, r, r * 0.92, 0, 0, Math.PI * 2);
+      ctx.clip();
+      const pulse = (still ? 0 : Math.sin(t * 3.2) * 0.35) + Math.min(1, this.level * 3) * 1.1;
+      ctx.strokeStyle = '#c3232b';
+      ctx.lineCap = 'round';
+      for (let k = 0; k < 9; k++) {
+        const a = (k / 9) * Math.PI * 2 + 0.3;
+        const ca = Math.cos(a);
+        const sa = Math.sin(a);
+        const wig = Math.sin(k * 2.1) * r * 0.25;
+        ctx.lineWidth = 1 + pulse * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(cx + ca * r * 0.12, cy + sa * r * 0.12);
+        ctx.quadraticCurveTo(cx + ca * r * 0.5 - sa * wig, cy + sa * r * 0.5 + ca * wig, cx + ca * r * 0.98, cy + sa * r * 0.9);
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(255,225,230,0.28)';
+      for (let k = 0; k < 3; k++) {
+        ctx.beginPath();
+        ctx.arc(cx + Math.cos(k * 2.4 + 1) * r * 0.5, cy + Math.sin(k * 2.4 + 1) * r * 0.45, r * (0.1 + 0.03 * k), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
     return { x: cx, y: cy, r };
   }
 
@@ -525,7 +607,7 @@ export class TractView {
    */
   private drawBird(st: BirdStyle, scale: number, wall: number, unit: number, lipHalf: number, t: number, still: boolean, stretch: number, stretchReveal: number): { x: number; y: number } {
     const ctx = this.ctx;
-    const c = this.colors;
+    const c = this.pal;
     const pts = this.pts;
     const lip = pts[N];
     const s = scale;
@@ -574,6 +656,7 @@ export class TractView {
     }
     // Penas: escamas curtas em fileiras desencontradas.
     ctx.strokeStyle = c[st.crown];
+    const ga = ctx.globalAlpha;
     ctx.globalAlpha *= 0.45;
     ctx.lineWidth = 1;
     const step = Math.max(7, 0.028 * s);
@@ -584,6 +667,10 @@ export class TractView {
         ctx.arc(x, y, step * 0.42, 0.15 * Math.PI, 0.85 * Math.PI);
         ctx.stroke();
       }
+    }
+    if (this.macabre) {
+      ctx.globalAlpha = ga;
+      this.drawHeadDecay(st, s, hx, hy, glot, lip);
     }
     ctx.restore();
     ctx.strokeStyle = c.ink;
@@ -619,6 +706,7 @@ export class TractView {
       ctx.arc(ex + er * 0.32, ey - er * 0.3, er * 0.16, 0, Math.PI * 2);
       ctx.fill();
     }
+    if (this.macabre) this.drawDeadEye(st, ex, ey, er, blink, s, t, still);
     if (st.brow) {
       ctx.strokeStyle = c.featherDark;
       ctx.lineWidth = Math.max(2.5, 0.014 * s);
@@ -703,6 +791,25 @@ export class TractView {
       ctx.restore();
     }
 
+    this.lowBeakTip = { x: lowTip.x, y: lowTip.y };
+    if (this.macabre) {
+      // Bico rachado e sangue seco na ponta.
+      ctx.save();
+      ctx.strokeStyle = '#0d0a0a';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(lip.x + len * 0.5, baseTop.y + 0.025 * s);
+      ctx.lineTo(lip.x + len * 0.56, baseTop.y + 0.04 * s);
+      ctx.lineTo(lip.x + len * 0.52, baseTop.y + 0.052 * s);
+      ctx.lineTo(lip.x + len * 0.6, gapTop - 0.006 * s);
+      ctx.stroke();
+      ctx.fillStyle = '#7a141a';
+      ctx.beginPath();
+      ctx.arc(tip.x - 0.01 * s, tip.y - 0.004 * s, 0.011 * s, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     // Cera na base (amarela no gavião, branca e carnuda no pombo), com a narina.
     ctx.fillStyle = c[st.cere];
     ctx.beginPath();
@@ -719,5 +826,266 @@ export class TractView {
     ctx.fill();
 
     return tip;
+  }
+
+  // ---------- Modo macabro ----------
+
+  /** Fibras de músculo ao longo do tubo e veias que pulsam. Chamado já recortado na carne. */
+  private drawMuscle(unit: number, wall: number, t: number, still: boolean): void {
+    const ctx = this.ctx;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#2a0709';
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = 1;
+    for (const side of [1, -1] as const) {
+      for (let f = 0.1; f < 1; f += 0.22) {
+        ctx.beginPath();
+        for (let i = 0; i <= N; i++) {
+          const p = this.pts[i];
+          const d = Math.max(this.shown[Math.min(i, N - 1)], 0) * 0.5 * unit + wall * f;
+          const x = p.x + p.nx * d * side;
+          const y = p.y + p.ny * d * side;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 0.95;
+    ctx.strokeStyle = '#b3141c';
+    for (const v of this.veinSeeds) {
+      const pulse = (still ? 0 : Math.sin(t * 3 + v.ph) * 0.35) + Math.min(1, this.level * 3) * 1.1;
+      ctx.lineWidth = 1.1 + pulse * 0.7;
+      ctx.beginPath();
+      for (let i = v.i; i <= Math.min(N, v.i + v.len); i++) {
+        const p = this.pts[i];
+        const half = Math.max(this.shown[Math.min(i, N - 1)], 0) * 0.5 * unit;
+        const d = half + wall * (v.off + Math.sin(i * v.wob + v.ph) * 0.22);
+        const x = p.x + p.nx * d * v.side;
+        const y = p.y + p.ny * d * v.side;
+        if (i === v.i) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  }
+
+  /** Costura grosseira no pescoço e a campainha (úvula) pendurada no céu da boca. */
+  private drawStitchesAndUvula(
+    outer: (i: number, side: 1 | -1) => readonly [number, number],
+    inner: (i: number, side: 1 | -1) => readonly [number, number],
+    unit: number,
+    t: number,
+    still: boolean,
+    bird: number,
+  ): void {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.lineCap = 'round';
+    const a = 6;
+    const b = 19;
+    ctx.strokeStyle = '#150405';
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    for (let i = a; i <= b; i++) {
+      const [x, y] = outer(i, 1);
+      if (i === a) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = '#d7ccb0';
+    ctx.lineWidth = 1.7;
+    for (let i = a + 1; i < b; i += 2) {
+      const [x, y] = outer(i, 1);
+      const p = this.pts[i];
+      const q = this.pts[i + 1];
+      const tx = q.x - this.pts[i - 1].x;
+      const ty = q.y - this.pts[i - 1].y;
+      const tl = Math.hypot(tx, ty) || 1;
+      const ux = tx / tl;
+      const uy = ty / tl;
+      ctx.beginPath();
+      ctx.moveTo(x - p.nx * 6 - ux * 2.5, y - p.ny * 6 - uy * 2.5);
+      ctx.lineTo(x + p.nx * 6 + ux * 2.5, y + p.ny * 6 + uy * 2.5);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    if (bird < 0.5) {
+      // Úvula: balança com o som.
+      const u = Math.round(N * 0.4);
+      const [ux0, uy0] = inner(u, 1);
+      const half = Math.max(this.shown[u], 0) * 0.5 * unit;
+      const len = Math.min(half * 0.85, unit * 0.9);
+      const sway = still ? 0 : Math.sin(t * 6) * Math.min(1, this.level * 4) * 4;
+      ctx.save();
+      ctx.fillStyle = '#7a1a20';
+      ctx.strokeStyle = '#150405';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(ux0 - 3, uy0);
+      ctx.quadraticCurveTo(ux0 - 4 + sway, uy0 + len * 0.7, ux0 + sway, uy0 + len);
+      ctx.quadraticCurveTo(ux0 + 4 + sway, uy0 + len * 0.7, ux0 + 3, uy0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  /** Baba com sangue escorrendo da boca, e gotas que caem. */
+  private drawDrool(x: number, y: number, scale: number, open: number, t: number, still: boolean): void {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 3; k++) {
+      const len = scale * (0.03 + 0.1 * open) * (0.6 + 0.4 * k * 0.5) + (still ? 0 : Math.sin(t * 1.7 + k * 2) * scale * 0.012);
+      const ox = x - k * scale * 0.035;
+      const sway = still ? 0 : Math.sin(t * 2.2 + k) * 2.5;
+      ctx.strokeStyle = k === 1 ? 'rgba(140,22,30,0.8)' : 'rgba(215,205,185,0.55)';
+      ctx.lineWidth = k === 1 ? 2.4 : 1.6;
+      ctx.beginPath();
+      ctx.moveTo(ox, y);
+      ctx.quadraticCurveTo(ox + sway, y + len * 0.5, ox + sway * 0.5, y + len);
+      ctx.stroke();
+      ctx.fillStyle = k === 1 ? 'rgba(150,24,32,0.9)' : 'rgba(215,205,185,0.7)';
+      ctx.beginPath();
+      ctx.ellipse(ox + sway * 0.5, y + len + 2.5, 2.2, 3.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (!still && open > 0.2) {
+        const ph = (t * 0.8 + k * 0.37) % 1;
+        ctx.globalAlpha = 1 - ph;
+        ctx.beginPath();
+        ctx.ellipse(ox + sway * 0.5, y + len + 6 + ph * scale * 0.22, 1.8, 2.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+    ctx.restore();
+  }
+
+  /** "PUM", "KSS" e "TS" sobem da boca e somem. */
+  private drawPopups(now: number, x: number, y: number, scale: number): void {
+    const ctx = this.ctx;
+    this.popups = this.popups.filter((p) => now - p.t0 < 650);
+    if (this.popups.length === 0) return;
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    for (const p of this.popups) {
+      const age = (now - p.t0) / 650;
+      const size = Math.max(16, scale * (p.kind === 0 ? 0.075 : p.kind === 1 ? 0.065 : 0.05));
+      ctx.font = `italic 700 ${size}px "Iowan Old Style", Palatino, Georgia, serif`;
+      const px = x + 16 + age * 34 + p.kind * 8;
+      const py = y - 14 - age * 46 - p.kind * 10;
+      ctx.globalAlpha = 1 - age * age;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#150405';
+      ctx.strokeText(p.text, px, py);
+      ctx.fillStyle = '#d3252d';
+      ctx.fillText(p.text, px, py);
+    }
+    ctx.restore();
+  }
+
+  /** Dentro do recorte da cabeça: crânio à mostra (gavião) ou pele depenada (pombo). */
+  private drawHeadDecay(st: BirdStyle, s: number, hx: number, hy: number, glot: { x: number; y: number }, lip: { x: number; y: number }): void {
+    const ctx = this.ctx;
+    if (st.brow) {
+      const cx = hx - 0.02 * s;
+      const cy = hy - 0.23 * s;
+      ctx.fillStyle = '#d8cdb2';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 0.1 * s, 0.045 * s, -0.12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#150405';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.strokeStyle = '#2b2118';
+      for (let k = 0; k < 4; k++) {
+        const a = k * 1.7 + 0.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(a) * 0.05 * s, cy + Math.sin(a) * 0.022 * s);
+        ctx.lineTo(cx + Math.cos(a + 0.35) * 0.095 * s, cy + Math.sin(a + 0.35) * 0.04 * s);
+        ctx.stroke();
+      }
+    } else {
+      const cx = hx - 0.05 * s;
+      const cy = hy - 0.2 * s;
+      ctx.fillStyle = '#a5857f';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 0.12 * s, 0.06 * s, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#5a3f3c';
+      for (let k = 0; k < 14; k++) {
+        const a = k * 2.399;
+        const rr = Math.sqrt((k + 1) / 14);
+        ctx.beginPath();
+        ctx.arc(cx + Math.cos(a) * 0.1 * s * rr, cy + Math.sin(a) * 0.045 * s * rr, 1.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // Mancha de apodrecimento no peito.
+    ctx.fillStyle = 'rgba(40,60,35,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(glot.x + 0.1 * s, glot.y - 0.05 * s, 0.12 * s, 0.08 * s, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    void lip;
+  }
+
+  /** Olho morto: órbita afundada, vasos estourados, pupila de fenda (gavião) ou leitosa (pombo), e uma lágrima de sangue. */
+  private drawDeadEye(st: BirdStyle, ex: number, ey: number, er: number, blink: number, s: number, t: number, still: boolean): void {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(12,4,5,0.8)';
+    ctx.lineWidth = er * 0.9;
+    ctx.beginPath();
+    ctx.ellipse(ex, ey, er * 1.55, er * 1.55, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    if (blink > 0.5) {
+      if (st.brow) {
+        ctx.fillStyle = '#050202';
+        ctx.beginPath();
+        ctx.ellipse(ex + er * 0.1, ey, er * 0.17, er * 0.78, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = 'rgba(228,226,208,0.82)';
+        ctx.beginPath();
+        ctx.ellipse(ex, ey, er * 0.92, er * 0.92, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2a2420';
+        ctx.beginPath();
+        ctx.arc(ex + er * 0.1, ey, er * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.strokeStyle = '#b0141c';
+    ctx.lineWidth = 1;
+    for (let k = 0; k < 9; k++) {
+      const a = k * 0.72 + 0.3;
+      const r0 = er * 0.35;
+      const r1 = er * (0.95 + 0.22 * Math.sin(k * 3.1));
+      ctx.beginPath();
+      ctx.moveTo(ex + Math.cos(a) * r0, ey + Math.sin(a) * r0);
+      ctx.lineTo(ex + Math.cos(a + 0.12) * (r0 + r1) * 0.5, ey + Math.sin(a + 0.12) * (r0 + r1) * 0.5);
+      ctx.lineTo(ex + Math.cos(a) * r1, ey + Math.sin(a) * r1);
+      ctx.stroke();
+    }
+    // Lágrima de sangue.
+    const len = 0.1 * s + (still ? 0 : Math.sin(t * 1.3) * 0.01 * s);
+    ctx.strokeStyle = 'rgba(150,20,28,0.9)';
+    ctx.lineWidth = Math.max(1.6, 0.007 * s);
+    ctx.beginPath();
+    ctx.moveTo(ex - er * 0.3, ey + er * 1.2);
+    ctx.quadraticCurveTo(ex - er * 0.7, ey + er * 1.2 + len * 0.5, ex - er * 0.5, ey + er * 1.2 + len);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(150,20,28,0.95)';
+    ctx.beginPath();
+    ctx.ellipse(ex - er * 0.5, ey + er * 1.2 + len + 3, 2.2, 3.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 }

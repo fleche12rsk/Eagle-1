@@ -13,6 +13,8 @@ declare class AudioWorkletProcessor {
 
 class GoelaProcessor extends AudioWorkletProcessor {
   private readonly engine = new Engine(sampleRate, 128);
+  private blocks = 0;
+  private lastHits = 0;
 
   constructor() {
     super();
@@ -28,7 +30,17 @@ class GoelaProcessor extends AudioWorkletProcessor {
     if (!out || out.length === 0) return true;
     const left = out[0];
     const right = out.length > 1 ? out[1] : null;
-    this.engine.process(left, right, left.length);
+    // Entrada: a música enviada pelo usuário (mono ou a média dos canais).
+    const inp = _inputs[0];
+    let input: Float32Array | null = null;
+    if (inp && inp.length > 0 && inp[0].length >= left.length) input = inp[0];
+    this.engine.process(left, right, left.length, input);
+    // Avisa a interface uns 20 vezes por segundo (nível, altura, batidas).
+    if (++this.blocks % 8 === 0) {
+      const hits = this.engine.hitCount;
+      this.port.postMessage({ t: 'meter', level: this.engine.meterIn, pitch: this.engine.inPitch, bright: this.engine.meterBright, hit: hits !== this.lastHits ? this.engine.lastHit : -1 });
+      this.lastHits = hits;
+    }
     return true;
   }
 }

@@ -37,10 +37,11 @@ const anatomy = (): AnatomyShape => ({
 
 // ---------- Painéis de knobs, gerados a partir das definições ----------
 
-const PANEL_GROUPS: ParamGroup[] = ['lingua', 'mandibula', 'labios', 'trato', 'saco', 'glote', 'pitch', 'envelope', 'saida'];
+const PANEL_GROUPS: ParamGroup[] = ['lingua', 'mandibula', 'labios', 'trato', 'saco', 'glote', 'pitch', 'envelope', 'saida', 'musica'];
 
 function buildPanels(): void {
   const host = $('#controls');
+  const musicHost = $('#music-controls');
   for (const group of PANEL_GROUPS) {
     const fs = document.createElement('fieldset');
     fs.className = `group group-${group}`;
@@ -58,12 +59,14 @@ function buildPanels(): void {
       k.set(state[i]);
     });
     fs.append(row);
-    host.append(fs);
+    (group === 'musica' ? musicHost : host).append(fs);
   }
-  host.addEventListener('knob-change', (e) => {
+  const onKnob = (e: Event) => {
     const { index, value } = (e as CustomEvent<{ index: number; value: number }>).detail;
     setParam(index, value, false);
-  });
+  };
+  host.addEventListener('knob-change', onKnob);
+  musicHost.addEventListener('knob-change', onKnob);
 }
 
 function setParam(index: number, value: number, updateKnob = true): void {
@@ -77,6 +80,7 @@ function setParam(index: number, value: number, updateKnob = true): void {
     markVowel();
   }
   if (id === 'sacSize' || id === 'sacPos') view.setSac(phys('sacSize'), phys('sacPos'));
+  if (id === 'extMix' || id === 'singAmt' || id === 'beatAmt') markMode();
 }
 
 function setPhysical(id: ParamId, v: number): void {
@@ -151,6 +155,7 @@ async function wake(): Promise<AudioBridge | null> {
     try {
       const { AudioBridge } = await import('./audio');
       bridge = await AudioBridge.create(state);
+      wireBridge(bridge);
       scope.attach(bridge.analyser);
       document.body.classList.add('is-awake');
       const screen = $('#wake-screen');
@@ -176,6 +181,108 @@ function updatePower(): void {
   btn.setAttribute('aria-pressed', String(on));
   btn.querySelector('.power-text')!.textContent = on ? 'Áudio ligado' : 'Áudio desligado';
 }
+
+// ---------- Música: enviar, tocar e escolher o que a criatura faz ----------
+
+const MODES: Record<string, { extMix: number; singAmt: number; beatAmt: number; hint: string }> = {
+  cantar: { extMix: 0, singAmt: 1, beatAmt: 0, hint: 'A criatura segue a altura da melodia com a própria voz. Funciona melhor com uma voz ou um instrumento só.' },
+  falar: { extMix: 1, singAmt: 0, beatAmt: 0, hint: 'O som da música passa pela garganta dela: cada instrumento ganha a boca, a língua e o bico da criatura.' },
+  beat: { extMix: 0, singAmt: 0, beatAmt: 1, hint: 'Bumbo vira "pum", caixa vira "kss", chimbal vira "ts". Quanto mais batida na música, melhor.' },
+  tudo: { extMix: 0.5, singAmt: 1, beatAmt: 1, hint: 'Canta a melodia, deixa o timbre da música passar pela garganta e faz o beatbox, tudo ao mesmo tempo.' },
+  off: { extMix: 0, singAmt: 0, beatAmt: 0, hint: 'A música não afeta a criatura. As teclas funcionam normalmente.' },
+};
+
+function applyMode(name: string): void {
+  const m = MODES[name];
+  if (!m) return;
+  setPhysical('extMix', m.extMix);
+  setPhysical('singAmt', m.singAmt);
+  setPhysical('beatAmt', m.beatAmt);
+  $('#mode-hint').textContent = m.hint;
+}
+
+function markMode(): void {
+  const cur = { extMix: phys('extMix'), singAmt: phys('singAmt'), beatAmt: phys('beatAmt') };
+  for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-mode]')) {
+    const m = MODES[btn.dataset.mode!];
+    const on = Math.abs(m.extMix - cur.extMix) < 0.03 && Math.abs(m.singAmt - cur.singAmt) < 0.03 && Math.abs(m.beatAmt - cur.beatAmt) < 0.03;
+    btn.setAttribute('aria-pressed', String(on));
+  }
+}
+
+const musicName = $('#music-name');
+const musicPlay = $<HTMLButtonElement>('#music-play');
+const HIT_NAMES = ['bumbo', 'caixa', 'chimbal'];
+const NOTE_NAMES = ['Dó', 'Dó♯', 'Ré', 'Ré♯', 'Mi', 'Fá', 'Fá♯', 'Sol', 'Sol♯', 'Lá', 'Lá♯', 'Si'];
+let hitTimer = 0;
+let musicBright = 0.4;
+let musicLevel = 0;
+
+function wireBridge(b: AudioBridge): void {
+  b.onMeter = (m) => {
+    musicLevel = m.level;
+    musicBright = m.bright;
+    const pitch = $('#music-pitch');
+    if (m.pitch > 0) {
+      const midi = Math.round(69 + 12 * Math.log2(m.pitch / 440));
+      pitch.textContent = `${NOTE_NAMES[((midi % 12) + 12) % 12]}${Math.floor(midi / 12) - 1}`;
+    } else pitch.textContent = '–';
+    if (m.hit >= 0) {
+      const out = $('#music-hit');
+      out.textContent = HIT_NAMES[m.hit];
+      clearTimeout(hitTimer);
+      hitTimer = window.setTimeout(() => (out.textContent = '–'), 220);
+      view.hit(m.hit);
+    }
+  };
+  b.onEnded = () => {
+    musicPlay.textContent = 'Tocar';
+  };
+}
+
+async function loadMusic(file: File): Promise<void> {
+  musicName.textContent = `Lendo ${file.name}…`;
+  const b = await wake();
+  if (!b) {
+    musicName.textContent = 'Não consegui ligar o áudio. Clique em "Acordar a criatura" e tente de novo.';
+    return;
+  }
+  try {
+    const dur = await b.loadFile(file);
+    const mm = Math.floor(dur / 60);
+    const ss = String(Math.floor(dur % 60)).padStart(2, '0');
+    musicName.textContent = `${file.name} (${mm}:${ss})`;
+    musicPlay.disabled = false;
+    // Primeira vez: já liga tudo e toca, para a criatura reagir logo.
+    if (phys('extMix') < 0.03 && phys('singAmt') < 0.03 && phys('beatAmt') < 0.03) applyMode('tudo');
+    b.playMusic();
+    musicPlay.textContent = 'Pausar';
+  } catch (err) {
+    console.error(err);
+    musicName.textContent = 'Esse arquivo não abriu. Tente um MP3, WAV, OGG ou M4A.';
+    musicPlay.disabled = true;
+  }
+}
+
+$('#music-pick').addEventListener('click', () => $<HTMLInputElement>('#music-file').click());
+$<HTMLInputElement>('#music-file').addEventListener('change', (e) => {
+  const f = (e.target as HTMLInputElement).files?.[0];
+  if (f) void loadMusic(f);
+});
+musicPlay.addEventListener('click', () => {
+  if (!bridge?.hasMusic) return;
+  if (bridge.playing) {
+    bridge.pauseMusic();
+    musicPlay.textContent = 'Tocar';
+  } else {
+    void bridge.ctx.resume();
+    bridge.playMusic();
+    musicPlay.textContent = 'Pausar';
+  }
+});
+$<HTMLInputElement>('#music-loop').addEventListener('change', (e) => bridge?.setLoop((e.target as HTMLInputElement).checked));
+$<HTMLInputElement>('#music-dry').addEventListener('change', (e) => bridge?.setDryLevel((e.target as HTMLInputElement).checked ? 0.7 : 0));
+for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-mode]')) btn.addEventListener('click', () => applyMode(btn.dataset.mode!));
 
 // ---------- Montagem ----------
 
@@ -225,6 +332,27 @@ new Keyboard(
 );
 
 $('#wake').addEventListener('click', () => void wake());
+const macabreBtn = $<HTMLButtonElement>('#macabre');
+const setMacabre = (on: boolean) => {
+  view.setMacabre(on);
+  macabreBtn.setAttribute('aria-pressed', String(on));
+  document.body.classList.toggle('is-macabre', on);
+  try {
+    localStorage.setItem('macabre', on ? '1' : '0');
+  } catch {
+    /* sem armazenamento */
+  }
+};
+macabreBtn.addEventListener('click', () => setMacabre(macabreBtn.getAttribute('aria-pressed') !== 'true'));
+{
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem('macabre');
+  } catch {
+    /* ignora */
+  }
+  setMacabre(saved !== '0');
+}
 $('#power').addEventListener('click', async () => {
   if (!bridge) {
     await wake();
@@ -236,8 +364,26 @@ $('#power').addEventListener('click', async () => {
 
 // Laço de desenho.
 const meter = $('#meter');
+const meterPos = $('#music-pos');
+const bridgeDuration = () => bridge?.duration ?? 1;
 let level = 0;
+let following = false;
 const frame = (now: number) => {
+  const follow = !!bridge?.playing && phys('mouthFollow') > 0.01 && (phys('extMix') > 0.02 || phys('singAmt') > 0.02);
+  if (!follow && following) view.setShape(anatomy());
+  following = follow;
+  if (follow) {
+    // Mesma regra do motor: a boca do desenho acompanha o volume e o brilho da música.
+    const f = phys('mouthFollow');
+    const a = anatomy();
+    const env = Math.min(1, musicLevel * 5);
+    a.jaw += (0.15 + 0.85 * env - a.jaw) * f;
+    a.lipOpen += (0.3 + 0.65 * env - a.lipOpen) * f;
+    a.tonguePos += (0.15 + 0.8 * musicBright - a.tonguePos) * f;
+    a.tongueHeight += (0.3 + 0.5 * musicBright * (1 - 0.5 * env) - a.tongueHeight) * f;
+    view.setShape(a);
+  }
+  if (bridge?.hasMusic) meterPos.style.setProperty('--pos', (bridge.position / Math.max(1, bridgeDuration())).toFixed(3));
   const rms = scope.draw();
   level += (Math.min(1, rms * 4) - level) * 0.3;
   meter.style.setProperty('--level', level.toFixed(3));
