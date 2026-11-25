@@ -21,8 +21,8 @@ Ramo nasal, saco vocal (ressonador como o de um sapo), 16 vozes de polifonia, We
 
 ## Páginas
 
-- [Sintetizador e explicação](/): o instrumento (começa como gavião) e um texto sobre como funciona um sintetizador de trato vocal.
-- [Política de Privacidade](/privacidade/): o que o site guarda (nada é enviado para servidores).
+- [Sintetizador e explicação](./): o instrumento (começa como gavião) e um texto sobre como funciona um sintetizador de trato vocal.
+- [Política de Privacidade](privacidade/): o que o site guarda (nada é enviado para servidores).
 
 ## Autor
 
