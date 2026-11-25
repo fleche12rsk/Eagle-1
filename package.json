@@ -1,0 +1,20 @@
+{
+  "name": "goela",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Goela: sintetizador de trato vocal que roda no navegador.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.7",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.2"
+  }
+}
