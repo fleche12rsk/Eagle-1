@@ -68,7 +68,8 @@ export const PARAMS = [
   p({ id: 'lipProtrusion', group: 'labios', label: 'Protrusão', labelEn: 'Protrusion', hint: 'Faz bico e alonga o tubo (u, ô).', min: 0, max: 1, def: 0, unit: '%', curve: 'lin', digits: 0, display: 100 }),
   p({ id: 'lipWidth', group: 'labios', label: 'Largura', labelEn: 'Width', hint: 'Sorriso largo ou boca estreita.', min: 0, max: 1, def: 0.9, unit: '%', curve: 'lin', digits: 0, display: 100 }),
   // Logo depois dos lábios, para ficar no bloco contíguo da anatomia.
-  p({ id: 'teeth', group: 'mandibula', label: 'Dentes', labelEn: 'Teeth', hint: 'Tamanho dos dentes. Eles aparecem quando a boca abre. Zero tira os dentes (como num bico).', min: 0, max: 1, def: 0.6, unit: '%', curve: 'lin', digits: 0, display: 100 }),
+  p({ id: 'mouthLength', group: 'mandibula', label: 'Comprimento', labelEn: 'Mouth length', hint: 'Estica a boca para a frente, como um focinho. Esticando bastante, brotam fileiras de dentes. O som muda a partir da próxima nota.', min: 0.6, max: 2.5, def: 1, unit: '%', curve: 'exp', digits: 0, display: 100 }),
+  p({ id: 'teeth', group: 'mandibula', label: 'Dentes', labelEn: 'Teeth', hint: 'Tamanho dos dentes. Aparecem quando a boca abre, e brotam em fileira quando você estica a boca. Zero tira os dentes (como num bico).', min: 0, max: 1, def: 0.6, unit: '%', curve: 'lin', digits: 0, display: 100 }),
 
   // Trato
   p({ id: 'tractLength', group: 'trato', label: 'Comprimento', labelEn: 'Length', hint: 'Tamanho do tubo: curto como um bico ou longo como um gigante. Vale a partir da próxima nota.', min: 0.4, max: 3, def: 1, unit: '%', curve: 'exp', digits: 0, display: 100 }),

@@ -56,7 +56,11 @@ export function tractResponse(shape: AnatomyShape, fsInt = 88200, size = 16384, 
 
 /** Picos de ressonância (formantes) abaixo de `maxHz`. */
 export function formants(shape: AnatomyShape, maxHz = 4500): number[] {
-  const { db, binHz } = tractResponse(shape);
+  return formantsOf(tractResponse(shape), maxHz);
+}
+
+/** Picos de uma resposta já calculada. */
+export function formantsOf({ db, binHz }: { db: Float64Array; binHz: number }, maxHz = 4500): number[] {
   // Suavização leve (3 pontos): F1 e F2 de vogais posteriores ficam muito próximos.
   const sm = new Float64Array(db.length);
   for (let i = 1; i < db.length - 1; i++) sm[i] = (db[i - 1] + 2 * db[i] + db[i + 1]) / 4;

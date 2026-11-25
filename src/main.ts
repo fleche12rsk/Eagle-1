@@ -32,6 +32,7 @@ const anatomy = (): AnatomyShape => ({
   lipProtrusion: phys('lipProtrusion'),
   lipWidth: phys('lipWidth'),
   teeth: phys('teeth'),
+  mouthLength: phys('mouthLength'),
 });
 
 // ---------- Painéis de knobs, gerados a partir das definições ----------

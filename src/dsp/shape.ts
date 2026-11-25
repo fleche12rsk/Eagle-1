@@ -14,7 +14,14 @@ export interface AnatomyShape {
   lipProtrusion: number; // 0 = neutro .. 1 = bico
   lipWidth: number; // 0 = estreito .. 1 = sorriso
   teeth?: number; // 0 = sem dentes .. 1 = dentes grandes
+  mouthLength?: number; // 1 = normal; >1 estica a boca como um focinho
 }
+
+/** Fração do trato (em repouso) que é faringe; o resto é boca e pode esticar. */
+export const PHARYNX_FRACTION = 0.42;
+
+/** Comprimento total relativo do trato quando a boca é esticada por `m`. */
+export const stretchedLength = (m: number) => PHARYNX_FRACTION + (1 - PHARYNX_FRACTION) * m;
 
 /** Limites das regiões, em fração do comprimento do trato. */
 export const REGIONS = {
@@ -44,7 +51,10 @@ export function computeDiameters(a: AnatomyShape, out: Float32Array): Float32Arr
 
   // Lábios: 2 a 6 segmentos finais, conforme a protrusão.
   const lipSegs = 2 + a.lipProtrusion * 4;
-  const lipStart = 1 - lipSegs / n;
+  const lipIdx = n - lipSegs;
+  // Boca esticada: os segmentos depois da faringe cobrem a mesma anatomia, só que mais longa.
+  const m = a.mouthLength ?? 1;
+  const total = stretchedLength(m);
   // Abertura labial: a mandíbula ajuda a abrir; largura escala o diâmetro equivalente.
   const lipD =
     a.lipOpen <= 0
@@ -61,7 +71,9 @@ export function computeDiameters(a: AnatomyShape, out: Float32Array): Float32Arr
   const oralWiden = 0.7 * (1 - a.tonguePos) * (0.5 + 0.5 * jaw);
 
   for (let i = 0; i < n; i++) {
-    const x = (i + 0.5) / n;
+    const pos = ((i + 0.5) / n) * total;
+    const x = pos <= PHARYNX_FRACTION ? pos : PHARYNX_FRACTION + (pos - PHARYNX_FRACTION) / m;
+    const k = i + 0.5; // posição em segmentos, para lábios e dentes
 
     // Paredes em repouso.
     let d: number;
@@ -76,21 +88,21 @@ export function computeDiameters(a: AnatomyShape, out: Float32Array): Float32Arr
     }
 
     // Língua: puxa o diâmetro em direção à constrição.
-    if (x >= REGIONS.larynxEnd && x < lipStart) {
+    if (x >= REGIONS.larynxEnd && k < lipIdx) {
       const b = bell(x, c, w);
       if (b > 0 && d > constriction) d = d - (d - constriction) * b;
     }
 
     // Dentes: logo atrás dos lábios, estreitam a passagem quando a mandíbula fecha.
     const teeth = a.teeth ?? 0;
-    if (teeth > 0 && x < lipStart && x >= lipStart - 1.5 / n) {
+    if (teeth > 0 && k < lipIdx && k >= lipIdx - 1.5) {
       const gap = 0.12 + 1.9 * jaw;
       if (d > gap) d -= (d - gap) * teeth * 0.6;
     }
 
     // Lábios.
-    if (x >= lipStart) {
-      const frac = Math.min(1, (x - lipStart) * n);
+    if (k >= lipIdx) {
+      const frac = Math.min(1, k - lipIdx);
       d = d * (1 - frac) + lipD * frac;
     } else if (d < MIN_DIAMETER) {
       d = MIN_DIAMETER;

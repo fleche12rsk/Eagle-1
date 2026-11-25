@@ -5,7 +5,7 @@
  */
 
 import type { CreatureId } from '../dsp/creatures';
-import { computeDiameters, type AnatomyShape } from '../dsp/shape';
+import { computeDiameters, stretchedLength, type AnatomyShape } from '../dsp/shape';
 
 const N = 44;
 
@@ -67,6 +67,9 @@ export class TractView {
   private teeth = 0;
   private teethTarget = 0;
   private teethShown = 0;
+  /** Comprimento da boca (1 = normal) e o valor animado na tela. */
+  private mouth = 1;
+  private mouthShown = 1;
   private jawOpen = 0.5;
   private beakShown = 0.5;
   private morph = 0;
@@ -118,6 +121,7 @@ export class TractView {
     computeDiameters(a, this.target);
     this.jawOpen = Math.min(1, a.jaw * 0.6 + a.lipOpen * 0.4);
     this.teeth = a.teeth ?? 0;
+    this.mouth = a.mouthLength ?? 1;
     // Os lábios cobrem os dentes; eles aparecem quando a boca abre.
     const t = Math.min(1, Math.max(0, (a.lipOpen - 0.15) / 0.4));
     this.teethTarget = this.teeth * t * t * (3 - 2 * t);
@@ -139,13 +143,12 @@ export class TractView {
   }
 
   /** Linha central do tubo: vertical, curva de 90° e horizontal. */
-  private layout(scale: number, ox: number, oy: number): void {
-    const total = 1;
-    const vertLen = PHARYNX * total;
-    const bendLen = BEND * total;
+  private layout(scale: number, ox: number, oy: number, total: number): void {
+    const vertLen = PHARYNX;
+    const bendLen = BEND;
     const radius = (bendLen / (Math.PI / 2)) * scale;
     for (let i = 0; i <= N; i++) {
-      const s = i / N;
+      const s = (i / N) * total;
       const p = this.pts[i];
       if (s <= PHARYNX) {
         p.x = ox;
@@ -185,7 +188,11 @@ export class TractView {
 
     // Escala: o tubo inteiro (com paredes) cabe com folga para rótulos.
     const radiusFrac = BEND / (Math.PI / 2);
-    const horiz = 1 - PHARYNX - BEND + radiusFrac;
+    // Boca esticada: o trecho horizontal cresce.
+    this.mouthShown += (this.mouth - this.mouthShown) * (still ? 1 : 0.2);
+    const mouth = this.mouthShown;
+    const total = stretchedLength(mouth);
+    const horiz = total - PHARYNX - BEND + radiusFrac;
     const vert = PHARYNX + radiusFrac;
     // Transição suave entre criaturas (0 = humano, 1 = gavião).
     const birdTarget = this.creature !== 'humano' ? 1 : 0;
@@ -196,7 +203,10 @@ export class TractView {
 
     const margin = 0.13; // espessura máxima de meio tubo + parede, em unidades de escala
     // O gavião precisa de espaço para o bico (direita) e a cabeça (em cima).
-    const extraR = style.extraR * bird;
+    const beakStretch = 0.6 + 0.4 * mouth;
+    // Quanto a boca esticada já revela dentes (0 até ~112%, 1 a partir de ~150%).
+    const sm = Math.min(1, Math.max(0, (mouth - 1.12) / 0.38));
+    const extraR = style.extraR * beakStretch * bird;
     const extraT = 0.12 * bird;
     const extraL = 0.1 * bird;
     const padL = 78;
@@ -209,7 +219,7 @@ export class TractView {
     const spareY = h - 2 * padY - spanY * scale;
     const ox = padL + (margin + extraL) * scale + spareX / 2;
     const oy = h - padY - margin * scale - spareY / 2;
-    this.layout(scale, ox, oy);
+    this.layout(scale, ox, oy, total);
 
     // Respiração em repouso e pulsação com o som.
     const breathe = still ? 0 : Math.sin(t * 1.3) * 0.035 * (this.sounding ? 0.3 : 1);
@@ -238,7 +248,7 @@ export class TractView {
     if (bird > 0) {
       ctx.save();
       ctx.globalAlpha = bird;
-      beakTip = this.drawBird(style, scale, wall, unit, lipHalf, t, still);
+      beakTip = this.drawBird(style, scale, wall, unit, lipHalf, t, still, beakStretch, sm);
       ctx.restore();
     }
 
@@ -322,6 +332,55 @@ export class TractView {
       tooth(N - 6, -1, 0.6, 0.7, 0.7);
       tooth(N - 4, -1, 0.85, 0.5, 0.9);
       tooth(N - 4, 1, 1, 0.3, 1.5);
+      ctx.restore();
+    }
+
+    // Focinho: esticando a boca, brota uma fileira de dentes de cima e de baixo.
+    const rowShow = this.teeth * sm * sm * (3 - 2 * sm) * (1 - bird);
+    if (rowShow > 0.02) {
+      const at = (f: number, side: 1 | -1) => {
+        const i0 = Math.max(0, Math.min(N - 1, Math.floor(f)));
+        const t = f - i0;
+        const [x0, y0] = inner(i0, side);
+        const [x1, y1] = inner(i0 + 1, side);
+        const half = Math.max(this.shown[Math.min(N - 1, i0)], 0) * 0.5 * unit;
+        return { x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t, half };
+      };
+      const count = Math.max(2, Math.min(14, Math.round(2 + 7 * (mouth - 1))));
+      const span = ((0.12 + 0.33 * (mouth - 1)) / total) * N;
+      const iEnd = N - 9.6;
+      const step = span / count;
+      const w = (scale * total * step) / N;
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, rowShow * 1.6);
+      ctx.fillStyle = c.tooth;
+      ctx.strokeStyle = c.ink;
+      ctx.lineWidth = 1;
+      for (let k = 0; k < count; k++) {
+        const f = iEnd - k * step;
+        // Os da frente são presas; os de trás, molares mais baixos.
+        const fang = k < 2;
+        for (const side of [1, -1] as const) {
+          const { x, y, half } = at(f, side);
+          const dir = side === 1 ? 1 : -1;
+          const len = half * (fang ? 0.62 : 0.4) * Math.min(1, rowShow * 1.4) * (0.85 + 0.15 * Math.sin(k * 1.7));
+          const hw = w * (fang ? 0.36 : 0.42);
+          ctx.beginPath();
+          ctx.moveTo(x - hw, y);
+          if (fang) {
+            ctx.quadraticCurveTo(x - hw * 0.6, y + dir * len * 0.7, x, y + dir * len);
+            ctx.quadraticCurveTo(x + hw * 0.6, y + dir * len * 0.7, x + hw, y);
+          } else {
+            ctx.lineTo(x - hw, y + dir * len * 0.75);
+            ctx.quadraticCurveTo(x - hw, y + dir * len, x - hw * 0.4, y + dir * len);
+            ctx.lineTo(x + hw * 0.4, y + dir * len);
+            ctx.quadraticCurveTo(x + hw, y + dir * len, x + hw, y + dir * len * 0.75);
+            ctx.lineTo(x + hw, y);
+          }
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
       ctx.restore();
     }
 
@@ -464,7 +523,7 @@ export class TractView {
    * cabeça cinza, pescoço furta-cor, olho laranja e bico curto com cera branca.
    * Devolve a ponta do bico.
    */
-  private drawBird(st: BirdStyle, scale: number, wall: number, unit: number, lipHalf: number, t: number, still: boolean): { x: number; y: number } {
+  private drawBird(st: BirdStyle, scale: number, wall: number, unit: number, lipHalf: number, t: number, still: boolean, stretch: number, stretchReveal: number): { x: number; y: number } {
     const ctx = this.ctx;
     const c = this.colors;
     const pts = this.pts;
@@ -574,7 +633,7 @@ export class TractView {
     const open = this.beakShown;
     const baseTop = { x: lip.x - 0.015 * s, y: topY - 0.035 * s };
     const gapTop = lip.y - lipHalf * 0.6;
-    const len = st.beakLen * s;
+    const len = st.beakLen * stretch * s;
     const lift = open * 0.12;
     const tip = {
       x: lip.x + len * Math.cos(lift),
@@ -595,7 +654,7 @@ export class TractView {
 
     const jawAngle = 0.06 + open * 0.42;
     const gapBot = lip.y + lipHalf * 0.6;
-    const lowLen = st.beakLen * 0.72 * s;
+    const lowLen = st.beakLen * stretch * 0.72 * s;
     const lowTip = { x: lip.x + lowLen * Math.cos(jawAngle), y: gapBot + lowLen * Math.sin(jawAngle) };
     ctx.beginPath();
     ctx.moveTo(lip.x, gapBot);
@@ -607,7 +666,7 @@ export class TractView {
 
     // Dentes no bico (ave mutante): serrilhado que só aparece com o bico aberto.
     const o = Math.min(1, Math.max(0, (open - 0.08) / 0.3));
-    const beakTeeth = this.teeth * o;
+    const beakTeeth = this.teeth * Math.max(o, stretchReveal);
     if (beakTeeth > 0.02) {
       const size = (0.01 + 0.022 * this.teeth) * s;
       const row = (x0: number, y0: number, x1: number, y1: number, up: boolean, count: number) => {

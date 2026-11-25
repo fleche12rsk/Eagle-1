@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { VOWELS } from '../src/dsp/params';
-import { computeDiameters } from '../src/dsp/shape';
-import { bark, formants, tractResponse } from './analysis';
+import { computeDiameters, stretchedLength } from '../src/dsp/shape';
+import { bark, formants, formantsOf, tractResponse } from './analysis';
 
 /** F1 aceitável e F2 de referência para cada vogal (voz adulta, 17,5 cm). */
 const REF = {
@@ -64,5 +64,18 @@ describe('vogais', () => {
         expect(out[k]).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe('boca esticada', () => {
+  test('esticar a boca alonga o tubo e abaixa F1 e F2', () => {
+    const base = { ...VOWELS.A, teeth: 0.6 };
+    const n = (m: number) => Math.round(44 * stretchedLength(m));
+    const f = (m: number) => formantsOf(tractResponse({ ...base, mouthLength: m }, 88200, 16384, n(m)));
+    const normal = f(1);
+    const long = f(2);
+    expect(n(2)).toBeGreaterThan(n(1) + 20);
+    expect(long[0]).toBeLessThan(normal[0]);
+    expect(long[1]).toBeLessThan(normal[1]);
   });
 });

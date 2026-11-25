@@ -5,7 +5,7 @@
 
 import { Glottis } from './glottis';
 import { VocalSac, type SacParams } from './sac';
-import { computeDiameters, type AnatomyShape } from './shape';
+import { computeDiameters, stretchedLength, type AnatomyShape } from './shape';
 import { Tract, type TractParams } from './tract';
 import { Rng, SmoothNoise, midiToHz } from './util';
 
@@ -173,7 +173,8 @@ export class Voice {
     const tract = this.tract;
     if (this.needsLength) {
       // Início de nota: o tubo está em silêncio, dá para trocar o comprimento.
-      this.applyLength(p.tractLength);
+      // Comprimento do trato e boca esticada definem quantos segmentos o tubo tem.
+      this.applyLength(p.tractLength * stretchedLength(p.mouthLength ?? 1));
       this.needsLength = false;
     }
     tract.beginBlock(shapeCoef, frames);
