@@ -307,6 +307,26 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-creature]'
 }
 applyCreature(creature);
 
+// Arrastar as alças vermelhas no desenho: língua (X = frente/trás, Y = altura) e mandíbula (Y = abre/fecha).
+{
+  let start = { pos: 0, h: 0, jaw: 0, lip: 0 };
+  view.setDragHandler({
+    start() {
+      start = { pos: phys('tonguePos'), h: phys('tongueHeight'), jaw: phys('jaw'), lip: phys('lipOpen') };
+    },
+    move(kind, dx, dy) {
+      const clamp = (v: number) => Math.min(1, Math.max(0, v));
+      if (kind === 'tongue') {
+        setPhysical('tonguePos', clamp(start.pos + dx * 1.7));
+        setPhysical('tongueHeight', clamp(start.h - dy * 2.4));
+      } else {
+        setPhysical('jaw', clamp(start.jaw + dy * 2.6));
+        setPhysical('lipOpen', clamp(start.lip + dy * 2.2));
+      }
+    },
+  });
+}
+
 const scope = new Scope($<HTMLCanvasElement>('#scope'));
 const noteOut = $('#note-out');
 
@@ -351,7 +371,7 @@ macabreBtn.addEventListener('click', () => setMacabre(macabreBtn.getAttribute('a
   } catch {
     /* ignora */
   }
-  setMacabre(saved !== '0');
+  setMacabre(saved === '1');
 }
 $('#power').addEventListener('click', async () => {
   if (!bridge) {

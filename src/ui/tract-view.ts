@@ -17,12 +17,21 @@ const BASE_COLORS = {
 };
 type Palette = typeof BASE_COLORS;
 
+/** Paleta clara de prancha anatômica (o visual padrão): paredes pálidas, cavidade branca, língua rosa, bico amarelo-oliva. */
+const PLATE: Partial<Palette> = {
+  flesh: '#d8847a', fleshSoft: '#f1e4dc', cavity: '#fbf9f6', tooth: '#fffcf0',
+  feather: '#efe2d2', featherDark: '#d9c6b2', featherLight: '#f7f0e6', beak: '#cbc47c', cere: '#d9d392', iris: '#8e6d35',
+  pigeon: '#e3e3e3', pigeonDark: '#c4c4c8', pigeonIris: '#b4803a', pigeonCere: '#f2eee6', sheenA: '#a9c8b4', sheenB: '#c3b0d0',
+};
+
 /** Paleta macabra: pele machucada, carne crua, osso amarelado, olhos mortos. */
 const MACABRE: Partial<Palette> = {
   flesh: '#5e0f12', fleshSoft: '#9b4f4c', cavity: '#0b0305', tooth: '#d8cc94',
   feather: '#4a3a30', featherDark: '#17110e', featherLight: '#8d8470', beak: '#2a2a28', cere: '#8a7a2e', iris: '#d6d04a',
   pigeon: '#6c6f72', pigeonDark: '#2d2f33', pigeonIris: '#d9d6c2', pigeonCere: '#a9a08c', sheenA: '#5d7a4f', sheenB: '#5a3a57',
 };
+
+export type DragKind = 'tongue' | 'jaw';
 
 type BirdKind = 'gaviao' | 'pombo';
 
@@ -68,8 +77,9 @@ export class TractView {
   private readonly reduced = matchMedia('(prefers-reduced-motion: reduce)');
   private colors: Palette = { ...BASE_COLORS };
   private creature: CreatureId = 'humano';
-  private macabre = true;
   private mc: Palette = { ...BASE_COLORS, ...MACABRE };
+  private lp: Palette = { ...BASE_COLORS, ...PLATE };
+  private macabre = false;
   private popups: { text: string; kind: number; t0: number }[] = [];
   private lowBeakTip = { x: 0, y: 0 };
   /** Veias fixas (sorteio determinístico) para o desenho não tremer a cada quadro. */
@@ -97,8 +107,68 @@ export class TractView {
   private beakShown = 0.5;
   private morph = 0;
 
+  /** Alças vermelhas desenhadas na última passada (px): corpo da língua e mandíbula. */
+  private dots: { tongue: { x: number; y: number }; jaw: { x: number; y: number } } = { tongue: { x: -99, y: -99 }, jaw: { x: -99, y: -99 } };
+  private lastScale = 300;
+  private drag: { kind: DragKind; x0: number; y0: number } | null = null;
+  private handler: { start: (k: DragKind) => void; move: (k: DragKind, dx: number, dy: number) => void } | null = null;
+
+  setDragHandler(h: { start: (k: DragKind) => void; move: (k: DragKind, dx: number, dy: number) => void }): void {
+    this.handler = h;
+  }
+
+  private dotAt(px: number, py: number): DragKind | null {
+    const r = 16;
+    for (const k of ['tongue', 'jaw'] as const) {
+      const d = this.dots[k];
+      if ((px - d.x) ** 2 + (py - d.y) ** 2 <= r * r) return k;
+    }
+    return null;
+  }
+
+  private wireDrag(): void {
+    const cv = this.canvas;
+    const pos = (e: PointerEvent) => {
+      const r = cv.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    cv.addEventListener('pointerdown', (e) => {
+      const p = pos(e);
+      const k = this.dotAt(p.x, p.y);
+      if (!k || e.button !== 0) return;
+      e.preventDefault();
+      cv.setPointerCapture(e.pointerId);
+      this.drag = { kind: k, x0: p.x, y0: p.y };
+      cv.style.cursor = 'grabbing';
+      this.handler?.start(k);
+    });
+    cv.addEventListener('pointermove', (e) => {
+      const p = pos(e);
+      if (this.drag) {
+        this.handler?.move(this.drag.kind, (p.x - this.drag.x0) / this.lastScale, (p.y - this.drag.y0) / this.lastScale);
+      } else cv.style.cursor = this.dotAt(p.x, p.y) ? 'grab' : '';
+    });
+    const end = () => {
+      this.drag = null;
+      cv.style.cursor = '';
+    };
+    cv.addEventListener('pointerup', end);
+    cv.addEventListener('pointercancel', end);
+    // No toque, só impede a rolagem da página quando o dedo começa numa alça.
+    cv.addEventListener(
+      'touchstart',
+      (e) => {
+        const t = e.touches[0];
+        const r = cv.getBoundingClientRect();
+        if (t && this.dotAt(t.clientX - r.left, t.clientY - r.top)) e.preventDefault();
+      },
+      { passive: false },
+    );
+  }
+
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.ctx = canvas.getContext('2d')!;
+    this.wireDrag();
     new ResizeObserver(() => this.resize()).observe(canvas);
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => this.readColors());
     this.readColors();
@@ -130,6 +200,7 @@ export class TractView {
       sheenB: v('--sheen-b', this.colors.sheenB),
     };
     this.mc = { ...this.colors, ...MACABRE };
+    this.lp = { ...this.colors, ...PLATE };
   }
 
   private resize(): void {
@@ -141,7 +212,11 @@ export class TractView {
     this.canvas.height = Math.round(r.height * this.dpr);
   }
 
+  /** Última anatomia recebida (para posicionar as alças). */
+  private anat: AnatomyShape = { tonguePos: 0.3, tongueHeight: 0.4, jaw: 0.8, lipOpen: 0.8, lipProtrusion: 0, lipWidth: 0.8 };
+
   setShape(a: AnatomyShape): void {
+    this.anat = a;
     computeDiameters(a, this.target);
     this.jawOpen = Math.min(1, a.jaw * 0.6 + a.lipOpen * 0.4);
     this.teeth = a.teeth ?? 0;
@@ -162,7 +237,7 @@ export class TractView {
   }
 
   private get pal(): Palette {
-    return this.macabre ? this.mc : this.colors;
+    return this.macabre ? this.mc : this.lp;
   }
 
   setCreature(id: CreatureId): void {
@@ -253,6 +328,7 @@ export class TractView {
     const spanX = horiz + 2 * margin + extraR + extraL;
     const spanY = vert + 2 * margin + extraT;
     const scale = Math.min((w - padL - padR) / spanX, (h - 2 * padY) / spanY);
+    this.lastScale = scale;
     const spareX = w - padL - padR - spanX * scale;
     const spareY = h - 2 * padY - spanY * scale;
     const ox = padL + (margin + extraL) * scale + spareX / 2;
@@ -342,6 +418,7 @@ export class TractView {
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
+    this.drawTongueAndSpine(outer, inner, unit, wall, scale, t, still, bird);
     if (this.macabre) this.drawStitchesAndUvula(outer, inner, unit, t, still, bird);
 
     // Dentes humanos: incisivos na frente e dois pré-molares atrás.
@@ -432,15 +509,23 @@ export class TractView {
     const g = this.pts[0];
     const flutter = this.sounding && !still ? Math.sin(t * 90) * 2 * Math.min(1, this.level * 4) : 0;
     const gHalf = this.shown[0] * 0.5 * unit + wall;
-    ctx.strokeStyle = c.flesh;
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(g.x - gHalf, g.y + 2);
-    ctx.lineTo(g.x - 2 + flutter, g.y - 3);
-    ctx.moveTo(g.x + gHalf, g.y + 2);
-    ctx.lineTo(g.x + 2 - flutter, g.y - 3);
-    ctx.stroke();
+    // Duas pregas vermelhas em bloco, com a abertura entre elas pulsando com o som.
+    {
+      const bw = Math.max(6, scale * 0.024);
+      const bh = Math.max(14, scale * 0.05);
+      const gap = Math.max(1.5, this.shown[0] * 0.5 * unit * 0.5) + Math.abs(flutter) * 0.4;
+      ctx.fillStyle = '#b0302b';
+      ctx.strokeStyle = '#4a0e0c';
+      ctx.lineWidth = 1;
+      for (const sd of [-1, 1]) {
+        const x0 = sd < 0 ? g.x - gap - bw : g.x + gap;
+        ctx.beginPath();
+        ctx.roundRect(x0, g.y - bh * 0.45, bw, bh, 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+      void gHalf;
+    }
 
     // Saco vocal: bolsa na frente da garganta que infla com o som.
     const pouch = this.drawSac(scale, unit, wall, t, still);
@@ -522,7 +607,7 @@ export class TractView {
     const neck = scale * 0.035;
     const cx = ax - p.nx * (neck + r * 0.85);
     const cy = ay - p.ny * (neck + r * 0.85) + r * 0.35;
-    const pigeon = this.creature === 'pombo';
+    const pigeon = false; // saco rosado e claro em todas as criaturas
 
     // Duto.
     ctx.strokeStyle = c.ink;
@@ -1087,5 +1172,140 @@ export class TractView {
     ctx.ellipse(ex - er * 0.5, ey + er * 1.2 + len + 3, 2.2, 3.6, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+  }
+
+  /**
+   * A língua como órgão: um bloco rosa que forma o piso da boca e sobe quando a
+   * língua sobe. Também: vértebras ao longo do pescoço, a aba da laringe e a mira
+   * "TONGUE" com as alças vermelhas arrastáveis (língua e mandíbula).
+   */
+  private drawTongueAndSpine(
+    outer: (i: number, side: 1 | -1) => readonly [number, number],
+    inner: (i: number, side: 1 | -1) => readonly [number, number],
+    unit: number,
+    wall: number,
+    scale: number,
+    t: number,
+    still: boolean,
+    bird: number,
+  ): void {
+    const ctx = this.ctx;
+    const c = this.pal;
+    const a = this.anat;
+
+    // Vértebras: caixinhas arredondadas ao longo da nuca.
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 1;
+    const vw = Math.max(9, scale * 0.052);
+    const vh = Math.max(7, scale * 0.032);
+    for (let i = 4; i <= Math.round(N * 0.4); i += 2) {
+      const [x, y] = outer(i, 1);
+      const p = this.pts[i];
+      const cx = x + p.nx * vw * 0.2 + (p.nx < -0.2 ? -vw * 0.05 : 0);
+      const cy = y + p.ny * vw * 0.2;
+      ctx.save();
+      ctx.translate(cx - (p.nx < -0.5 ? vw * 0.35 : 0), cy);
+      ctx.rotate(Math.atan2(p.ny, p.nx) + Math.PI / 2);
+      ctx.fillStyle = '#f6efdf';
+      ctx.strokeStyle = '#7d6e60';
+      ctx.beginPath();
+      ctx.roundRect(-vw / 2, -vh / 2, vw, vh, 3);
+      ctx.fill();
+      ctx.stroke();
+      // Espinho para trás.
+      ctx.beginPath();
+      ctx.moveTo(-vw / 2, -vh * 0.25);
+      ctx.lineTo(-vw / 2 - vw * 0.22, 0);
+      ctx.lineTo(-vw / 2, vh * 0.25);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+
+    // Aba cinza da laringe (epiglote), junto à base da língua.
+    {
+      const [fx, fy] = inner(7, -1);
+      ctx.save();
+      ctx.translate(fx, fy - scale * 0.01);
+      ctx.rotate(-0.5 + (still ? 0 : Math.sin(t * 3) * 0.04 * Math.min(1, this.level * 4)));
+      ctx.fillStyle = '#b9b7bf';
+      ctx.strokeStyle = '#6d6b75';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(0, -scale * 0.035, scale * 0.016, scale * 0.045, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Língua: o piso da boca, do fundo até perto da ponta. O topo segue o ar (muda com altura e posição).
+    const iBack = Math.round(N * 0.45);
+    const iTip = N - 7;
+    const bulk = scale * 0.075;
+    ctx.beginPath();
+    for (let i = iBack; i <= iTip; i++) {
+      const [x, y] = inner(i, -1);
+      if (i === iBack) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    for (let i = iTip; i >= iBack; i--) {
+      const f = (i - iBack) / (iTip - iBack);
+      const bump = Math.pow(Math.sin(Math.PI * Math.min(1, f * 1.08)), 0.65);
+      const [x, y] = outer(i, -1);
+      const pp = this.pts[i];
+      ctx.lineTo(x - pp.nx * bump * bulk, y - pp.ny * bump * bulk);
+    }
+    ctx.closePath();
+    const tg = ctx.createLinearGradient(0, 0, 0, this.h);
+    tg.addColorStop(0, '#efb0a8');
+    tg.addColorStop(1, c.flesh);
+    ctx.fillStyle = this.macabre ? '#a9423c' : tg;
+    ctx.fill();
+    ctx.strokeStyle = this.macabre ? '#2a0709' : '#a8554d';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    // Mira "TONGUE" e alças arrastáveis.
+    const cT = 0.24 + 0.4 * a.tonguePos + 0.06 * a.tongueHeight * (1 - a.tonguePos);
+    const ci = Math.max(iBack + 2, Math.min(iTip - 3, Math.round(cT * N)));
+    const [tx, ty0] = inner(ci, -1);
+    const ty = ty0 + 5;
+    this.dots.tongue = { x: tx, y: ty };
+    const jaw = bird > 0.5 ? this.lowBeakTip : { x: outer(N - 1, -1)[0], y: outer(N - 1, -1)[1] };
+    this.dots.jaw = { x: jaw.x, y: jaw.y + 2 };
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(60,50,45,0.16)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(tx, 30);
+    ctx.lineTo(tx, this.h - 14);
+    ctx.moveTo(10, ty);
+    ctx.lineTo(this.w - 10, ty);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(60,50,45,0.6)';
+    ctx.font = '600 11px ui-monospace, Menlo, Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('TONGUE', tx, 22);
+    for (const k of ['tongue', 'jaw'] as const) {
+      const d = this.dots[k];
+      const active = this.drag?.kind === k;
+      ctx.fillStyle = '#b8261f';
+      ctx.strokeStyle = active ? '#ffffff' : 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, active ? 8.5 : 6.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = '#4a0e0c';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    ctx.restore();
+    void unit;
+    void wall;
   }
 }
