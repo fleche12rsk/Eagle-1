@@ -9,7 +9,7 @@ O Bota Ultra-Garganta 3000 gera som por modelo físico, sem gravações. Uma fon
 ## Recursos atuais
 
 - Música enviada pelo usuário (arquivo no próprio navegador): a criatura canta a melodia (detector de altura), deixa o som da música passar pelo tubo no lugar da glote ("Falar") e faz beatbox (bumbo, caixa e chimbal detectados viram "pum", "kss", "ts"). Não reconhece letra.
-- Modo macabro nos desenhos das criaturas (veias, costura, olhos mortos, baba de sangue), que pode ser desligado.
+- Desenho anatômico claro com língua, vértebras e pregas vocais, e alças vermelhas arrastáveis (língua e mandíbula). Modo macabro opcional (veias, costura, olhos mortos).
 
 - Saco vocal: ressonador lateral (tamanho, elasticidade, amortecimento, posição, acoplamento) que irradia som e infla na tela.
 - Dentes: aparecem quando a boca abre e mudam um pouco o som; numa ave, viram um bico serrilhado.
