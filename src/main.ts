@@ -14,7 +14,7 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)
 
 /** Criatura inicial: o gavião, a menos que a URL peça outra (?criatura=humano). */
 const askedCreature = new URLSearchParams(location.search).get('criatura');
-let creature: CreatureId = askedCreature === 'humano' || askedCreature === 'pombo' ? askedCreature : 'gaviao';
+let creature: CreatureId = askedCreature === 'humano' || askedCreature === 'pombo' || askedCreature === 'sapo' ? askedCreature : 'gaviao';
 
 /** Estado da interface: valores normalizados na ordem de PARAMS. */
 const state = creatureNormalized(creature);
@@ -33,6 +33,9 @@ const anatomy = (): AnatomyShape => ({
   lipWidth: phys('lipWidth'),
   teeth: phys('teeth'),
   mouthLength: phys('mouthLength'),
+  taper: phys('taper'),
+  ridges: phys('ridges'),
+  rings: phys('rings'),
 });
 
 // ---------- Painéis de knobs, gerados a partir das definições ----------
@@ -75,7 +78,7 @@ function setParam(index: number, value: number, updateKnob = true): void {
   bridge?.send({ t: 'param', i: index, v: value });
   const id = PARAMS[index].id;
   if (id === 'tonguePos' || id === 'tongueHeight') pad.set(phys('tonguePos'), phys('tongueHeight'));
-  if (index >= PARAM_INDEX.tonguePos && index <= PARAM_INDEX.teeth) {
+  if ((index >= PARAM_INDEX.tonguePos && index <= PARAM_INDEX.teeth) || id === 'taper' || id === 'ridges' || id === 'rings') {
     view.setShape(anatomy());
     markVowel();
   }
@@ -137,6 +140,7 @@ function applyCreature(id: CreatureId): void {
   const kicker: Record<CreatureId, string> = {
     gaviao: 'O gavião está dormindo no poleiro',
     pombo: 'O pombo está cochilando na praça',
+    sapo: 'O sapo está parado na lama',
     humano: 'A criatura está dormindo',
   };
   $('#wake-kicker').textContent = kicker[id];

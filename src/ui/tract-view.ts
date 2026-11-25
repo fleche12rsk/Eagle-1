@@ -13,12 +13,14 @@ const BASE_COLORS = {
   flesh: '#a8392a', fleshSoft: '#d98b73', cavity: '#3a1f1b', ink: '#211c17', ink2: '#5a5047', paper: '#f1ebe0',
   feather: '#b5824c', featherDark: '#5e3b22', featherLight: '#ead7b8', beak: '#3f4248', cere: '#e0b43a', iris: '#e2a51c',
   tooth: '#f6f1e4',
+  toad: '#8fa86a', toadDark: '#5f7c42', toadLight: '#dfe6b0', toadIris: '#d8a31c', toadLip: '#7f9a56',
   pigeon: '#9aa1ab', pigeonDark: '#6b7380', pigeonIris: '#e8742a', pigeonCere: '#f1ece4', sheenA: '#3f8f6b', sheenB: '#7c4f93',
 };
 type Palette = typeof BASE_COLORS;
 
 /** Paleta clara de prancha anatômica (o visual padrão): paredes pálidas, cavidade branca, língua rosa, bico amarelo-oliva. */
 const PLATE: Partial<Palette> = {
+  toad: '#a8bd7e', toadDark: '#7c9558', toadLight: '#e6ecc0', toadIris: '#d9a21e', toadLip: '#8aa563',
   flesh: '#d8847a', fleshSoft: '#f1e4dc', cavity: '#fbf9f6', tooth: '#fffcf0',
   feather: '#efe2d2', featherDark: '#d9c6b2', featherLight: '#f7f0e6', beak: '#cbc47c', cere: '#d9d392', iris: '#8e6d35',
   pigeon: '#e3e3e3', pigeonDark: '#c4c4c8', pigeonIris: '#b4803a', pigeonCere: '#f2eee6', sheenA: '#a9c8b4', sheenB: '#c3b0d0',
@@ -26,6 +28,7 @@ const PLATE: Partial<Palette> = {
 
 /** Paleta macabra: pele machucada, carne crua, osso amarelado, olhos mortos. */
 const MACABRE: Partial<Palette> = {
+  toad: '#5d6b45', toadDark: '#2f3a26', toadLight: '#9aa07a', toadIris: '#cfc45a', toadLip: '#3f4a30',
   flesh: '#5e0f12', fleshSoft: '#9b4f4c', cavity: '#0b0305', tooth: '#d8cc94',
   feather: '#4a3a30', featherDark: '#17110e', featherLight: '#8d8470', beak: '#2a2a28', cere: '#8a7a2e', iris: '#d6d04a',
   pigeon: '#6c6f72', pigeonDark: '#2d2f33', pigeonIris: '#d9d6c2', pigeonCere: '#a9a08c', sheenA: '#5d7a4f', sheenB: '#5a3a57',
@@ -33,15 +36,17 @@ const MACABRE: Partial<Palette> = {
 
 export type DragKind = 'tongue' | 'jaw';
 
-type BirdKind = 'gaviao' | 'pombo';
+type BirdKind = 'gaviao' | 'pombo' | 'sapo';
 
 /** Diferenças de desenho entre as aves. As cores vêm do CSS. */
 interface BirdStyle {
-  feather: 'feather' | 'pigeon';
-  crown: 'featherDark' | 'pigeonDark';
-  throat: 'featherLight' | null;
-  iris: 'iris' | 'pigeonIris';
-  cere: 'cere' | 'pigeonCere';
+  feather: 'feather' | 'pigeon' | 'toad';
+  crown: 'featherDark' | 'pigeonDark' | 'toadDark';
+  throat: 'featherLight' | 'toadLight' | null;
+  iris: 'iris' | 'pigeonIris' | 'toadIris';
+  cere: 'cere' | 'pigeonCere' | 'toadDark';
+  beakColor: 'beak' | 'toadLip';
+  toad: boolean;
   beakLen: number;
   hook: number;
   brow: boolean;
@@ -50,8 +55,9 @@ interface BirdStyle {
 }
 
 const BIRDS: Record<BirdKind, BirdStyle> = {
-  gaviao: { feather: 'feather', crown: 'featherDark', throat: 'featherLight', iris: 'iris', cere: 'cere', beakLen: 0.21, hook: 1, brow: true, sheen: false, extraR: 0.26 },
-  pombo: { feather: 'pigeon', crown: 'pigeonDark', throat: null, iris: 'pigeonIris', cere: 'pigeonCere', beakLen: 0.13, hook: 0.3, brow: false, sheen: true, extraR: 0.18 },
+  sapo: { feather: 'toad', crown: 'toadDark', throat: 'toadLight', iris: 'toadIris', cere: 'toadDark', beakColor: 'toadLip', toad: true, beakLen: 0.11, hook: 0, brow: false, sheen: false, extraR: 0.12 },
+  gaviao: { beakColor: 'beak', toad: false, feather: 'feather', crown: 'featherDark', throat: 'featherLight', iris: 'iris', cere: 'cere', beakLen: 0.21, hook: 1, brow: true, sheen: false, extraR: 0.26 },
+  pombo: { beakColor: 'beak', toad: false, feather: 'pigeon', crown: 'pigeonDark', throat: null, iris: 'pigeonIris', cere: 'pigeonCere', beakLen: 0.13, hook: 0.3, brow: false, sheen: true, extraR: 0.18 },
 };
 const PHARYNX = 0.4; // fração do comprimento na vertical
 const BEND = 0.16; // fração na curva
@@ -192,6 +198,11 @@ export class TractView {
       cere: v('--cere', this.colors.cere),
       iris: v('--iris', this.colors.iris),
       tooth: v('--tooth', this.colors.tooth),
+      toad: this.colors.toad,
+      toadDark: this.colors.toadDark,
+      toadLight: this.colors.toadLight,
+      toadIris: this.colors.toadIris,
+      toadLip: this.colors.toadLip,
       pigeon: v('--pigeon', this.colors.pigeon),
       pigeonDark: v('--pigeon-dark', this.colors.pigeonDark),
       pigeonIris: v('--pigeon-iris', this.colors.pigeonIris),
@@ -577,7 +588,7 @@ export class TractView {
     else label(Math.round(N * 0.66), -1, 'língua', 0, 26, 'center');
     if (isBird) {
       ctx.textAlign = 'left';
-      ctx.fillText('bico', beakTip.x + 6, beakTip.y + 22);
+      ctx.fillText(this.birdKind === 'sapo' ? 'boca' : 'bico', beakTip.x + 6, beakTip.y + 22);
     } else label(N, 1, 'lábios', 18, -18, 'left');
     if (pouch) {
       ctx.textAlign = 'left';
@@ -739,10 +750,26 @@ export class TractView {
       ctx.ellipse(glot.x + 0.02 * s, glot.y - 0.2 * s, 0.32 * s, 0.13 * s, -0.1, 0, Math.PI * 2);
       ctx.fill();
     }
+    if (st.toad) {
+      // Verrugas: pontinhos escuros e claros espalhados pela pele.
+      let seed = 7;
+      for (let k = 0; k < 46; k++) {
+        seed = (seed * 16807) % 2147483647;
+        const u = seed / 2147483647;
+        seed = (seed * 16807) % 2147483647;
+        const v = seed / 2147483647;
+        const wx = glot.x - 0.2 * s + u * (lip.x - glot.x + 0.15 * s);
+        const wy = hy - 0.32 * s + v * (glot.y - hy + 0.3 * s);
+        ctx.fillStyle = k % 3 === 0 ? c.toadLight : c.toadDark;
+        ctx.beginPath();
+        ctx.arc(wx, wy, 1.6 + (k % 4) * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
     // Penas: escamas curtas em fileiras desencontradas.
     ctx.strokeStyle = c[st.crown];
     const ga = ctx.globalAlpha;
-    ctx.globalAlpha *= 0.45;
+    ctx.globalAlpha *= st.toad ? 0 : 0.45;
     ctx.lineWidth = 1;
     const step = Math.max(7, 0.028 * s);
     let row = 0;
@@ -765,7 +792,7 @@ export class TractView {
     // Olho (com sobrancelha severa no gavião). Pisca de vez em quando.
     const ex = lip.x - 0.17 * s;
     const ey = topY - 0.075 * s;
-    const er = 0.034 * s;
+    const er = 0.034 * s * (st.toad ? 1.75 : 1);
     const blink = still ? 1 : t % 4.3 < 0.12 ? 0.15 : 1;
     if (!st.brow) {
       // Anel claro em volta do olho do pombo.
@@ -784,7 +811,8 @@ export class TractView {
     if (blink > 0.5) {
       ctx.fillStyle = '#120d0a';
       ctx.beginPath();
-      ctx.arc(ex + er * 0.12, ey, er * 0.52, 0, Math.PI * 2);
+      if (st.toad) ctx.ellipse(ex, ey, er * 0.72, er * 0.28, 0, 0, Math.PI * 2);
+      else ctx.arc(ex + er * 0.12, ey, er * 0.52, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#fff';
       ctx.beginPath();
@@ -812,7 +840,7 @@ export class TractView {
       x: lip.x + len * Math.cos(lift),
       y: gapTop - len * Math.sin(lift) + 0.055 * s * st.hook,
     };
-    ctx.fillStyle = c.beak;
+    ctx.fillStyle = c[st.beakColor];
     ctx.strokeStyle = c.ink;
     ctx.lineWidth = 1.25;
     ctx.beginPath();

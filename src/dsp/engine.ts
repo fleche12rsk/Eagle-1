@@ -51,6 +51,7 @@ export class Engine {
   private readonly followShape: AnatomyShape = { tonguePos: 0.5, tongueHeight: 0.5, jaw: 0.5, lipOpen: 0.5, lipProtrusion: 0, lipWidth: 0.5, teeth: 0, mouthLength: 1 };
   private readonly beatShape: AnatomyShape = { tonguePos: 0.5, tongueHeight: 0.5, jaw: 0.5, lipOpen: 0.5, lipProtrusion: 0, lipWidth: 0.5, teeth: 0, mouthLength: 1 };
   private singing = false;
+  private clickGain = 0;
   private quietFor = 0;
   private beatKind = -1;
   private beatT = 0;
@@ -69,9 +70,9 @@ export class Engine {
     this.mix = new Float32Array(Math.max(maxBlock, 128));
     this.limRelease = onePoleCoef(0.12, fs);
     this.vp = {
-      fineTune: 0, transpose: 0, fry: 0, tractLength: 1, pitchAmt: 0, pitchAtk: 0.05, pitchDec: 0.5, pitchSus: 0, sacSize: 0, sacElastic: 0.5, sacDamp: 0.4, sacPos: 0.3, sacCouple: 0.6, rd: 1, aspiration: 0, jitter: 0, shimmer: 0, vibRate: 0, vibDepth: 0, vibDelay: 0,
+      fineTune: 0, transpose: 0, fry: 0, tractLength: 1, pitchAmt: 0, pitchAtk: 0.05, pitchDec: 0.5, pitchSus: 0, rough: 0, twoVoices: 0, click: 0, sacSize: 0, sacElastic: 0.5, sacDamp: 0.4, sacPos: 0.3, sacCouple: 0.6, rd: 1, aspiration: 0, jitter: 0, shimmer: 0, vibRate: 0, vibDepth: 0, vibDelay: 0,
       attack: 0.01, decay: 0.1, sustain: 1, release: 0.1, glide: 0,
-      tonguePos: 0.5, tongueHeight: 0.5, jaw: 0.5, lipOpen: 0.5, lipProtrusion: 0, lipWidth: 0.5, teeth: 0, mouthLength: 1,
+      tonguePos: 0.5, tongueHeight: 0.5, jaw: 0.5, lipOpen: 0.5, lipProtrusion: 0, lipWidth: 0.5, teeth: 0, mouthLength: 1, taper: 0, ridges: 0, rings: 0,
     };
     this.beatVp = { ...this.vp };
     Object.assign(this.beatVp, {
@@ -116,6 +117,7 @@ export class Engine {
     const legato = this.stackLen > 0 && !this.voice.releasing;
     if (this.stackLen < MAX_STACK) this.stack[this.stackLen++] = note;
     this.voice.noteOn(note, vel, legato);
+    if (!legato && this.vp.click > 0.01) this.triggerClick(this.vp.click);
   }
 
   private noteOff(note: number): void {
@@ -143,7 +145,7 @@ export class Engine {
       const d = this.target[i] - this.current[i];
       if (d !== 0) {
         this.current[i] = Math.abs(d) < 1e-5 ? this.target[i] : this.current[i] + d * coef;
-        if (i >= P.tonguePos && i <= P.teeth) this.anatomyDirty = true;
+        if ((i >= P.tonguePos && i <= P.teeth) || i === P.taper || i === P.ridges || i === P.rings) this.anatomyDirty = true;
       }
     }
     this.updatePhysical();
@@ -181,6 +183,12 @@ export class Engine {
     v.lipWidth = ph(P.lipWidth);
     v.teeth = ph(P.teeth);
     v.mouthLength = ph(P.mouthLength);
+    v.taper = ph(P.taper);
+    v.ridges = ph(P.ridges);
+    v.rings = ph(P.rings);
+    v.rough = ph(P.rough);
+    v.twoVoices = ph(P.twoVoices);
+    v.click = ph(P.click);
     v.attack = ph(P.attack);
     v.decay = ph(P.decay);
     v.sustain = ph(P.sustain);
@@ -250,6 +258,9 @@ export class Engine {
         f.lipWidth = vp.lipWidth;
         f.teeth = vp.teeth;
         f.mouthLength = vp.mouthLength;
+        f.taper = vp.taper;
+        f.ridges = vp.ridges;
+        f.rings = vp.rings;
         this.voice.setAnatomy(f);
         this.anatomyDirty = true;
       } else if (this.anatomyDirty) {
@@ -269,7 +280,7 @@ export class Engine {
         bm.fill(0, 0, n);
         this.beatVp.tractLength = this.vp.tractLength;
         this.beat.render(bm, 0, n, this.beatVp, 1 - Math.exp(-n / (0.004 * this.fs)));
-        const g = 1.4 * Math.max(beatAmt, 0.0001) * (this.beatKind === KICK ? KICK_BOOST : 1);
+        const g = 1.4 * Math.max(beatAmt, this.clickGain, 0.0001) * (this.beatKind === KICK ? KICK_BOOST : 1);
         for (let s = 0; s < n; s++) mix[s] += bm[s] * g;
       }
 
@@ -331,6 +342,14 @@ export class Engine {
     }
   }
 
+  /** Estalo de língua no começo da nota: um sopro curto de ruído, pela boca do beatbox. */
+  private triggerClick(amount: number): void {
+    this.beatKind = HAT;
+    this.beatT = 0;
+    this.clickGain = amount;
+    this.beat.startNoise(HAT_GAIN * 4 * amount, 0.014, 2600, 0.9);
+  }
+
   /** Posição da língua e dos lábios de cada batida, no tempo. */
   private updateBeatMouth(n: number): void {
     const a = this.beatShape;
@@ -376,7 +395,10 @@ export class Engine {
     this.beat.setAnatomy(a);
     // O bumbo é uma nota curta: solta depois de 40 ms (senão a voz fica "presa" em sustain zero).
     if (this.beatKind === KICK && t > 0.04) this.beat.noteOff();
-    if (this.beat.idle && t > 0.4) this.beatKind = -1;
+    if (this.beat.idle && t > 0.4) {
+      this.beatKind = -1;
+      this.clickGain = 0;
+    }
   }
 
   /** Limitador de segurança: ataque instantâneo, soltura de 120 ms, teto em 0,9. */

@@ -34,6 +34,9 @@ export interface VoiceParams extends AnatomyShape, SacParams {
   sustain: number;
   release: number;
   glide: number;
+  rough: number;
+  twoVoices: number;
+  click: number;
 }
 
 const enum Stage {
@@ -49,6 +52,7 @@ const enum Stage {
 export class Voice {
   readonly tract: Tract;
   private readonly glottis: Glottis;
+  private readonly glottis2: Glottis;
   private readonly sac: VocalSac;
   private readonly rateInt: number;
   private readonly tractParams: TractParams = { glottalReflection: 0.75, lipReflection: -0.85, damping: 0.9995 };
@@ -85,6 +89,7 @@ export class Voice {
     this.rateInt = fs * OVERSAMPLE;
     this.tract = new Tract(segments, this.rateInt);
     this.glottis = new Glottis(this.rateInt, seed);
+    this.glottis2 = new Glottis(this.rateInt, seed + 101);
     this.sac = new VocalSac(this.rateInt);
     this.drift = new SmoothNoise(new Rng(seed * 7919 + 13));
   }
@@ -240,6 +245,8 @@ export class Voice {
     const baseCents = p.fineTune + p.transpose * 100;
     const tp = this.tractParams;
     const glottis = this.glottis;
+    const glottis2 = this.glottis2;
+    const two = p.twoVoices ?? 0;
     const amp = 0.35 + 0.65 * this.velocity;
     let peak = 0;
 
@@ -286,6 +293,7 @@ export class Voice {
             if (this.pendingNote >= 0) {
               tract.reset();
               glottis.reset();
+              glottis2.reset();
               sac.reset();
               this.start(this.pendingNote, this.pendingVel, true);
               this.pendingNote = -1;
@@ -327,6 +335,7 @@ export class Voice {
       // Oversampling 2x: duas passadas no tubo, média simples como decimação.
       const voiced = this.stage !== Stage.Idle;
       let g1 = voiced ? glottis.next(freq, p) : 0;
+      if (voiced && two > 0.01) g1 += two * 0.85 * glottis2.next(freq * 1.4983, p);
       if (useExt) {
         const e0 = 0.5 * (this.prevExt + ext![s]);
         g1 = g1 * (1 - extMix) + e0 * extGain * extMix;
@@ -342,6 +351,7 @@ export class Voice {
         y1 += sacRad * sv;
       }
       let g2 = voiced ? glottis.next(freq, p) : 0;
+      if (voiced && two > 0.01) g2 += two * 0.85 * glottis2.next(freq * 1.4983, p);
       if (useExt) {
         const e1 = ext![s];
         g2 = g2 * (1 - extMix) + e1 * extGain * extMix;

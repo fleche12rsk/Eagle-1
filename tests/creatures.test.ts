@@ -144,3 +144,37 @@ describe('pombo e saco vocal', () => {
     expect(Math.sqrt(diff / plain.length)).toBeGreaterThan(rms(plain) * 0.2);
   });
 });
+
+describe('sapo', () => {
+  const croak = renderNote('sapo', 48, 1.0, 1.4);
+
+  test('coaxar seguro, audível e grave', () => {
+    let peak = 0;
+    for (const v of croak) {
+      expect(Number.isNaN(v)).toBe(false);
+      peak = Math.max(peak, Math.abs(v));
+    }
+    expect(peak).toBeLessThanOrEqual(1);
+    expect(rms(croak, Math.floor(0.3 * FS), Math.floor(0.9 * FS))).toBeGreaterThan(0.02);
+    if (process.env.HAWK_OUT) writeFileSync(`${process.env.HAWK_OUT}/sapo.wav`, wav(croak));
+  });
+
+  test('é áspero: menos periódico que o humano', () => {
+    const periodicity = (x: Float32Array) => {
+      const a = Math.floor(0.4 * FS);
+      let best = 0;
+      for (let lag = Math.floor(FS / 400); lag <= Math.floor(FS / 90); lag++) {
+        let num = 0, e1 = 0, e2 = 0;
+        for (let i = 0; i < 6000; i++) {
+          num += x[a + i] * x[a + i + lag];
+          e1 += x[a + i] ** 2;
+          e2 += x[a + i + lag] ** 2;
+        }
+        best = Math.max(best, num / Math.sqrt(e1 * e2 + 1e-12));
+      }
+      return best;
+    };
+    const human = renderNote('humano', 48, 1.0, 1.4);
+    expect(periodicity(croak)).toBeLessThan(periodicity(human) - 0.06);
+  });
+});

@@ -14,6 +14,8 @@ O Bota Ultra-Garganta 3000 gera som por modelo físico, sem gravações. Uma fon
 - Saco vocal: ressonador lateral (tamanho, elasticidade, amortecimento, posição, acoplamento) que irradia som e infla na tela.
 - Dentes: aparecem quando a boca abre e mudam um pouco o som; numa ave, viram um bico serrilhado.
 - Comprimento da boca (60–250%): estica a boca como um focinho, alonga o tubo e, passando de ~120%, revela fileiras de dentes.
+- Criatura Sapo (`?criatura=sapo`): coaxar grave e áspero, saco vocal enorme, cristas no céu da boca.
+- Parâmetros de timbre: afunilamento, cristas do palato, anéis da garganta, aspereza, estalo de língua e 2 vozes.
 - Criatura Pombo: arrulho de bico fechado, com o som saindo pelo papo inflado (`?criatura=pombo`).
 - Criatura padrão: um gavião. O grito sobe e despenca de altura, rouco, com o tubo curto como um bico; a voz humana fica a um clique (ou em `/?criatura=humano`).
 - Voz única tocada pelo teclado na tela ou pelo teclado do computador, com glide entre notas ligadas.

@@ -5,7 +5,7 @@
 
 import { PARAMS, PARAM_COUNT, toNormalized, type ParamId } from './params';
 
-export type CreatureId = 'humano' | 'gaviao' | 'pombo';
+export type CreatureId = 'humano' | 'gaviao' | 'pombo' | 'sapo';
 
 export interface Creature {
   id: CreatureId;
@@ -102,6 +102,52 @@ export const CREATURES: Record<CreatureId, Creature> = {
       pitchDec: 0.5,
       pitchSus: -0.4,
       volume: 0.68,
+    },
+  },
+  /**
+   * Sapo: um coaxar grave e rouco ("rrribbit"). Voz áspera e irregular, boca
+   * larga com cristas no céu da boca, e o saco vocal enorme e mole que ressoa.
+   */
+  sapo: {
+    id: 'sapo',
+    name: 'Sapo',
+    blurb: 'Coaxar grave e áspero, com o saco vocal enorme ressoando.',
+    values: {
+      transpose: 0,
+      tension: 1.7,
+      aspiration: 0.1,
+      jitter: 0.4,
+      shimmer: 0.35,
+      fry: 0.5,
+      rough: 0.75,
+      vibRate: 0,
+      vibDepth: 0,
+      tractLength: 0.72,
+      tonguePos: 0.5,
+      tongueHeight: 0.35,
+      jaw: 0.8,
+      lipOpen: 0.9,
+      lipProtrusion: 0,
+      lipWidth: 1,
+      mouthLength: 1.15,
+      teeth: 0,
+      ridges: 0.5,
+      rings: 0.3,
+      sacSize: 0.9,
+      sacElastic: 0.25,
+      sacDamp: 0.25,
+      sacPos: 0.32,
+      sacCouple: 1,
+      attack: 0.03,
+      decay: 0.35,
+      sustain: 0.6,
+      release: 0.25,
+      glide: 0.05,
+      pitchAmt: 2,
+      pitchAtk: 0.06,
+      pitchDec: 0.25,
+      pitchSus: -0.3,
+      volume: 0.6,
     },
   },
 };

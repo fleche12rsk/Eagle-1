@@ -53,6 +53,9 @@ export const PARAMS = [
   p({ id: 'jitter', group: 'glote', label: 'Jitter', labelEn: 'Jitter', hint: 'Pequenas variações de altura, ciclo a ciclo.', min: 0, max: 1, def: 0.15, unit: '%', curve: 'lin', digits: 0, display: 100 }),
   p({ id: 'shimmer', group: 'glote', label: 'Shimmer', labelEn: 'Shimmer', hint: 'Pequenas variações de volume, ciclo a ciclo.', min: 0, max: 1, def: 0.1, unit: '%', curve: 'lin', digits: 0, display: 100 }),
   p({ id: 'fry', group: 'glote', label: 'Fry', labelEn: 'Fry', hint: 'Sub-harmônico: um ciclo forte, outro fraco. Deixa a voz rouca, rasgada.', min: 0, max: 1, def: 0, unit: '%', curve: 'lin', digits: 0, display: 100 }),
+  p({ id: 'rough', group: 'glote', label: 'Aspereza', labelEn: 'Rough', hint: 'Deixa a voz irregular e caótica, como um rosnado ou um coaxar.', min: 0, max: 1, def: 0, unit: '%', curve: 'lin', digits: 0, display: 100 }),
+  p({ id: 'click', group: 'glote', label: 'Estalo', labelEn: 'Click', hint: 'Um estalo de língua no começo de cada nota.', min: 0, max: 1, def: 0, unit: '%', curve: 'lin', digits: 0, display: 100 }),
+  p({ id: 'twoVoices', group: 'glote', label: '2 vozes', labelEn: '2 voices', hint: 'Soma uma segunda voz uma quinta acima, como se a criatura tivesse duas cabeças.', min: 0, max: 1, def: 0, unit: '%', curve: 'lin', digits: 0, display: 100 }),
   p({ id: 'vibRate', group: 'glote', label: 'Vibrato taxa', labelEn: 'Vibrato rate', hint: 'Velocidade do vibrato.', min: 0, max: 12, def: 5.2, unit: 'Hz', curve: 'lin', digits: 1 }),
   p({ id: 'vibDepth', group: 'glote', label: 'Vibrato prof.', labelEn: 'Vibrato depth', hint: 'Quanto o vibrato sobe e desce a nota.', min: 0, max: 100, def: 18, unit: 'ct', curve: 'sq', digits: 0 }),
   p({ id: 'vibDelay', group: 'glote', label: 'Vibrato atraso', labelEn: 'Vibrato delay', hint: 'Tempo até o vibrato aparecer na nota.', min: 0, max: 2, def: 0.35, unit: 's', curve: 'sq', digits: 2 }),
@@ -73,6 +76,9 @@ export const PARAMS = [
   p({ id: 'teeth', group: 'mandibula', label: 'Dentes', labelEn: 'Teeth', hint: 'Tamanho dos dentes. Aparecem quando a boca abre, e brotam em fileira quando você estica a boca. Zero tira os dentes (como num bico).', min: 0, max: 1, def: 0.6, unit: '%', curve: 'lin', digits: 0, display: 100 }),
 
   // Trato
+  p({ id: 'taper', group: 'trato', label: 'Afunilamento', labelEn: 'Taper', hint: 'Negativo: o tubo se abre como um funil na direção da boca. Positivo: se fecha como um cone. Muda as ressonâncias.', min: -1, max: 1, def: 0, unit: '%', curve: 'lin', digits: 0, display: 100 }),
+  p({ id: 'ridges', group: 'trato', label: 'Cristas', labelEn: 'Ridges', hint: 'Ranhuras no céu da boca, como num sapo ou numa ave. Deixam o timbre mais metálico e cheio de picos.', min: 0, max: 1, def: 0, unit: '%', curve: 'lin', digits: 0, display: 100 }),
+  p({ id: 'rings', group: 'trato', label: 'Anéis', labelEn: 'Rings', hint: 'Anéis na garganta, como a traqueia de uma ave. Dão um zumbido oco e ressonante.', min: 0, max: 1, def: 0, unit: '%', curve: 'lin', digits: 0, display: 100 }),
   p({ id: 'tractLength', group: 'trato', label: 'Comprimento', labelEn: 'Length', hint: 'Tamanho do tubo: curto como um bico ou longo como um gigante. Vale a partir da próxima nota.', min: 0.4, max: 3, def: 1, unit: '%', curve: 'exp', digits: 0, display: 100 }),
 
   // Saco vocal

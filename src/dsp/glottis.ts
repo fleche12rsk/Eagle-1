@@ -94,6 +94,7 @@ export interface GlottisParams {
   aspiration: number;
   jitter: number;
   shimmer: number;
+  rough?: number;
 }
 
 /**
@@ -170,6 +171,12 @@ export class Glottis {
     this.cycleFreqMul = 1 + p.jitter * p.jitter * 0.03 * j;
     const sh = this.shimmerNoise.next(inc) * 0.5 + this.rng.bipolar() * 0.5;
     this.cycleGain = 1 - p.shimmer * p.shimmer * 0.45 * (0.5 + 0.5 * sh);
+    // Aspereza: ciclos caóticos, uns longos e fracos, outros curtos e fortes.
+    const ro = p.rough ?? 0;
+    if (ro > 0) {
+      this.cycleFreqMul *= 1 + ro * 0.09 * this.rng.bipolar();
+      this.cycleGain *= 1 - ro * 0.6 * this.rng.next();
+    }
 
     // Fry: ciclos alternados mais fracos e mais longos geram um sub-harmônico (f0/2).
     this.oddCycle = !this.oddCycle;

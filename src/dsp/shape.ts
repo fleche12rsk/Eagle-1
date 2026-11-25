@@ -15,6 +15,9 @@ export interface AnatomyShape {
   lipWidth: number; // 0 = estreito .. 1 = sorriso
   teeth?: number; // 0 = sem dentes .. 1 = dentes grandes
   mouthLength?: number; // 1 = normal; >1 estica a boca como um focinho
+  taper?: number; // -1 funil .. +1 cone
+  ridges?: number; // 0..1 cristas no céu da boca
+  rings?: number; // 0..1 anéis na garganta
 }
 
 /** Fração do trato (em repouso) que é faringe; o resto é boca e pode esticar. */
@@ -91,6 +94,16 @@ export function computeDiameters(a: AnatomyShape, out: Float32Array): Float32Arr
     if (x >= REGIONS.larynxEnd && k < lipIdx) {
       const b = bell(x, c, w);
       if (b > 0 && d > constriction) d = d - (d - constriction) * b;
+    }
+
+    // Afunilamento, cristas do palato e anéis da faringe.
+    if (k < lipIdx) {
+      const tp = a.taper ?? 0;
+      if (tp !== 0 && x >= REGIONS.larynxEnd) d *= 1 + 0.55 * tp * (x - 0.5) * 2;
+      const rg = a.ridges ?? 0;
+      if (rg > 0 && x > REGIONS.pharynxEnd) d *= 1 - 0.55 * rg * (0.5 + 0.5 * Math.cos(k * 2.4));
+      const rn = a.rings ?? 0;
+      if (rn > 0 && x < REGIONS.pharynxEnd && x > REGIONS.larynxEnd) d *= 1 - 0.5 * rn * (0.5 + 0.5 * Math.cos(k * 1.9));
     }
 
     // Dentes: logo atrás dos lábios, estreitam a passagem quando a mandíbula fecha.
