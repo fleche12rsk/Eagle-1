@@ -1,4 +1,4 @@
-/* bleh 3: estética de prancha anatômica. Papel, tinta e carne. */
+/* Bota Ultra-Garganta 3000: estética de prancha anatômica. Papel, tinta e carne. */
 
 :root {
   --paper: #f1ebe0;
@@ -1037,5 +1037,24 @@ code {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Nome longo: no celular o cabeçalho vira duas linhas (logo em cima, menu embaixo). */
+@media (max-width: 640px) {
+  .site-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    padding-block: 0.75rem 0.25rem;
+  }
+
+  .brand-name {
+    font-size: 1.2rem;
+    line-height: 1.1;
+  }
+
+  .site-nav a {
+    font-size: 1rem;
   }
 }

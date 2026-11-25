@@ -1,4 +1,4 @@
-# Faz o build do bleh 3 e publica no branch gh-pages (GitHub Pages).
+# Faz o build do Bota Ultra-Garganta 3000 e publica no branch gh-pages (GitHub Pages).
 name: Publicar no GitHub Pages
 
 on:
