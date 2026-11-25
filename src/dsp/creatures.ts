@@ -5,7 +5,7 @@
 
 import { PARAMS, PARAM_COUNT, toNormalized, type ParamId } from './params';
 
-export type CreatureId = 'humano' | 'gaviao';
+export type CreatureId = 'humano' | 'gaviao' | 'pombo';
 
 export interface Creature {
   id: CreatureId;
@@ -57,6 +57,49 @@ export const CREATURES: Record<CreatureId, Creature> = {
       pitchDec: 1.1,
       pitchSus: -0.7,
       volume: 0.62,
+    },
+  },
+  /**
+   * Pombo: o arrulho "hu-RRUU-u" sai de bico fechado. O som enche o papo
+   * (saco vocal grande e mole, ligado no fundo da garganta) e é ele que soa.
+   * A nota sobe devagar e cai no fim; um vibrato rápido dá o rolado.
+   */
+  pombo: {
+    id: 'pombo',
+    name: 'Pombo',
+    blurb: 'Arrulho de bico fechado: o som sai pelo papo inflado.',
+    values: {
+      transpose: 5,
+      tension: 1.5,
+      aspiration: 0.12,
+      jitter: 0.25,
+      shimmer: 0.2,
+      fry: 0.12,
+      vibRate: 11,
+      vibDepth: 22,
+      vibDelay: 0.05,
+      tractLength: 0.5,
+      tonguePos: 0.4,
+      tongueHeight: 0.55,
+      jaw: 0.1,
+      lipOpen: 0,
+      lipProtrusion: 0,
+      lipWidth: 0.4,
+      sacSize: 0.75,
+      sacElastic: 0.4,
+      sacDamp: 0.35,
+      sacPos: 0.3,
+      sacCouple: 0.85,
+      attack: 0.09,
+      decay: 0.7,
+      sustain: 0.55,
+      release: 0.3,
+      glide: 0.08,
+      pitchAmt: 4,
+      pitchAtk: 0.2,
+      pitchDec: 0.5,
+      pitchSus: -0.4,
+      volume: 0.68,
     },
   },
 };

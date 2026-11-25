@@ -1,13 +1,16 @@
 import { describe, expect, test } from 'vitest';
 import { writeFileSync } from 'node:fs';
 import { Engine } from '../src/dsp/engine';
-import { creatureNormalized } from '../src/dsp/creatures';
+import { creatureNormalized, type CreatureId } from '../src/dsp/creatures';
+import { PARAM_INDEX } from '../src/dsp/params';
 
 const FS = 48000;
 
-function renderNote(creature: 'humano' | 'gaviao', note: number, holdS: number, totalS: number): Float32Array {
+function renderNote(creature: CreatureId, note: number, holdS: number, totalS: number, tweak?: (v: Float32Array) => void): Float32Array {
   const e = new Engine(FS);
-  e.handle({ t: 'params', v: creatureNormalized(creature) });
+  const v = creatureNormalized(creature);
+  tweak?.(v);
+  e.handle({ t: 'params', v });
   const total = Math.floor((totalS * FS) / 128) * 128;
   const out = new Float32Array(total);
   const buf = new Float32Array(128);
@@ -103,5 +106,41 @@ describe('gavião', () => {
       return (zc / x.length) * FS * 0.5;
     };
     expect(centroid(scream.subarray(0, FS))).toBeGreaterThan(centroid(human.subarray(0, FS)) * 2);
+  });
+});
+
+const rms = (x: Float32Array) => Math.sqrt(x.reduce((a, v) => a + v * v, 0) / x.length);
+
+describe('pombo e saco vocal', () => {
+  const coo = renderNote('pombo', 60, 1.2, 1.6);
+
+  test('arrulho seguro e audível', () => {
+    let peak = 0;
+    for (const v of coo) {
+      expect(Number.isNaN(v)).toBe(false);
+      peak = Math.max(peak, Math.abs(v));
+    }
+    expect(peak).toBeLessThanOrEqual(1);
+    expect(peak).toBeGreaterThan(0.05);
+    if (process.env.HAWK_OUT) {
+      writeFileSync(`${process.env.HAWK_OUT}/pombo.wav`, wav(coo));
+      writeFileSync(`${process.env.HAWK_OUT}/pombo-level.txt`, `pico ${peak.toFixed(3)} rms ${rms(coo).toFixed(4)}\n`);
+    }
+  });
+
+  test('de bico fechado, o som sai pelo papo: sem saco, quase silêncio', () => {
+    const noSac = renderNote('pombo', 60, 1.2, 1.6, (v) => (v[PARAM_INDEX.sacSize] = 0));
+    expect(rms(noSac)).toBeLessThan(rms(coo) * 0.1);
+  });
+
+  test('o saco muda o timbre de uma voz de boca aberta', () => {
+    const plain = renderNote('humano', 48, 0.8, 1.0);
+    const withSac = renderNote('humano', 48, 0.8, 1.0, (v) => {
+      v[PARAM_INDEX.sacSize] = 0.8;
+      v[PARAM_INDEX.sacCouple] = 1;
+    });
+    let diff = 0;
+    for (let i = 0; i < plain.length; i++) diff += (plain[i] - withSac[i]) ** 2;
+    expect(Math.sqrt(diff / plain.length)).toBeGreaterThan(rms(plain) * 0.2);
   });
 });

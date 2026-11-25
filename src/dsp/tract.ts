@@ -161,6 +161,17 @@ export class Tract {
     return out;
   }
 
+  /** Pressão no segmento `j` (soma das ondas que vão e voltam). */
+  pressureAt(j: number): number {
+    return this.R[j] + this.L[j];
+  }
+
+  /** Injeta pressão no segmento `j`, metade em cada sentido. */
+  inject(j: number, v: number): void {
+    this.R[j] += 0.5 * v;
+    this.L[j] += 0.5 * v;
+  }
+
   get lastOutput(): number {
     return this.lipOut;
   }

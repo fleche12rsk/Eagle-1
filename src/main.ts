@@ -14,7 +14,7 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)
 
 /** Criatura inicial: o gavião, a menos que a URL peça outra (?criatura=humano). */
 const askedCreature = new URLSearchParams(location.search).get('criatura');
-let creature: CreatureId = askedCreature === 'humano' ? 'humano' : 'gaviao';
+let creature: CreatureId = askedCreature === 'humano' || askedCreature === 'pombo' ? askedCreature : 'gaviao';
 
 /** Estado da interface: valores normalizados na ordem de PARAMS. */
 const state = creatureNormalized(creature);
@@ -35,7 +35,7 @@ const anatomy = (): AnatomyShape => ({
 
 // ---------- Painéis de knobs, gerados a partir das definições ----------
 
-const PANEL_GROUPS: ParamGroup[] = ['lingua', 'mandibula', 'labios', 'trato', 'glote', 'pitch', 'envelope', 'saida'];
+const PANEL_GROUPS: ParamGroup[] = ['lingua', 'mandibula', 'labios', 'trato', 'saco', 'glote', 'pitch', 'envelope', 'saida'];
 
 function buildPanels(): void {
   const host = $('#controls');
@@ -74,6 +74,7 @@ function setParam(index: number, value: number, updateKnob = true): void {
     view.setShape(anatomy());
     markVowel();
   }
+  if (id === 'sacSize' || id === 'sacPos') view.setSac(phys('sacSize'), phys('sacPos'));
 }
 
 function setPhysical(id: ParamId, v: number): void {
@@ -119,6 +120,7 @@ function applyCreature(id: CreatureId): void {
   bridge?.send({ t: 'params', v: Array.from(state) });
   view.setShape(anatomy());
   view.setCreature(id);
+  view.setSac(phys('sacSize'), phys('sacPos'));
   pad.set(phys('tonguePos'), phys('tongueHeight'));
   markVowel();
   document.body.dataset.creature = id;
@@ -126,7 +128,12 @@ function applyCreature(id: CreatureId): void {
     btn.setAttribute('aria-pressed', String(btn.dataset.creature === id));
   }
   $('#creature-blurb').textContent = CREATURES[id].blurb;
-  $('#wake-kicker').textContent = id === 'gaviao' ? 'O gavião está dormindo no poleiro' : 'A criatura está dormindo';
+  const kicker: Record<CreatureId, string> = {
+    gaviao: 'O gavião está dormindo no poleiro',
+    pombo: 'O pombo está cochilando na praça',
+    humano: 'A criatura está dormindo',
+  };
+  $('#wake-kicker').textContent = kicker[id];
 }
 
 // ---------- Áudio sob demanda ----------

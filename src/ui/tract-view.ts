@@ -8,6 +8,27 @@ import type { CreatureId } from '../dsp/creatures';
 import { computeDiameters, type AnatomyShape } from '../dsp/shape';
 
 const N = 44;
+
+type BirdKind = 'gaviao' | 'pombo';
+
+/** Diferenças de desenho entre as aves. As cores vêm do CSS. */
+interface BirdStyle {
+  feather: 'feather' | 'pigeon';
+  crown: 'featherDark' | 'pigeonDark';
+  throat: 'featherLight' | null;
+  iris: 'iris' | 'pigeonIris';
+  cere: 'cere' | 'pigeonCere';
+  beakLen: number;
+  hook: number;
+  brow: boolean;
+  sheen: boolean;
+  extraR: number;
+}
+
+const BIRDS: Record<BirdKind, BirdStyle> = {
+  gaviao: { feather: 'feather', crown: 'featherDark', throat: 'featherLight', iris: 'iris', cere: 'cere', beakLen: 0.21, hook: 1, brow: true, sheen: false, extraR: 0.26 },
+  pombo: { feather: 'pigeon', crown: 'pigeonDark', throat: null, iris: 'pigeonIris', cere: 'pigeonCere', beakLen: 0.13, hook: 0.3, brow: false, sheen: true, extraR: 0.18 },
+};
 const PHARYNX = 0.4; // fração do comprimento na vertical
 const BEND = 0.16; // fração na curva
 
@@ -33,8 +54,14 @@ export class TractView {
   private colors = {
     flesh: '#a8392a', fleshSoft: '#d98b73', cavity: '#3a1f1b', ink: '#211c17', ink2: '#5a5047', paper: '#f1ebe0',
     feather: '#b5824c', featherDark: '#5e3b22', featherLight: '#ead7b8', beak: '#3f4248', cere: '#e0b43a', iris: '#e2a51c',
+    pigeon: '#9aa1ab', pigeonDark: '#6b7380', pigeonIris: '#e8742a', pigeonCere: '#f1ece4', sheenA: '#3f8f6b', sheenB: '#7c4f93',
   };
   private creature: CreatureId = 'humano';
+  /** Última ave escolhida: continua desenhada enquanto a transição some. */
+  private birdKind: BirdKind = 'gaviao';
+  private sacSize = 0;
+  private sacPos = 0.3;
+  private sacShown = 0;
   private jawOpen = 0.5;
   private beakShown = 0.5;
   private morph = 0;
@@ -63,6 +90,12 @@ export class TractView {
       beak: v('--beak', this.colors.beak),
       cere: v('--cere', this.colors.cere),
       iris: v('--iris', this.colors.iris),
+      pigeon: v('--pigeon', this.colors.pigeon),
+      pigeonDark: v('--pigeon-dark', this.colors.pigeonDark),
+      pigeonIris: v('--pigeon-iris', this.colors.pigeonIris),
+      pigeonCere: v('--pigeon-cere', this.colors.pigeonCere),
+      sheenA: v('--sheen-a', this.colors.sheenA),
+      sheenB: v('--sheen-b', this.colors.sheenB),
     };
   }
 
@@ -82,6 +115,12 @@ export class TractView {
 
   setCreature(id: CreatureId): void {
     this.creature = id;
+    if (id !== 'humano') this.birdKind = id;
+  }
+
+  setSac(size: number, pos: number): void {
+    this.sacSize = size;
+    this.sacPos = pos;
   }
 
   setLevel(level: number, sounding: boolean): void {
@@ -139,16 +178,17 @@ export class TractView {
     const horiz = 1 - PHARYNX - BEND + radiusFrac;
     const vert = PHARYNX + radiusFrac;
     // Transição suave entre criaturas (0 = humano, 1 = gavião).
-    const hawkTarget = this.creature === 'gaviao' ? 1 : 0;
-    this.morph += (hawkTarget - this.morph) * (still ? 1 : 0.12);
-    if (Math.abs(this.morph - hawkTarget) < 0.002) this.morph = hawkTarget;
-    const hawk = this.morph;
+    const birdTarget = this.creature !== 'humano' ? 1 : 0;
+    this.morph += (birdTarget - this.morph) * (still ? 1 : 0.12);
+    if (Math.abs(this.morph - birdTarget) < 0.002) this.morph = birdTarget;
+    const bird = this.morph;
+    const style = BIRDS[this.birdKind];
 
     const margin = 0.13; // espessura máxima de meio tubo + parede, em unidades de escala
     // O gavião precisa de espaço para o bico (direita) e a cabeça (em cima).
-    const extraR = 0.26 * hawk;
-    const extraT = 0.12 * hawk;
-    const extraL = 0.1 * hawk;
+    const extraR = style.extraR * bird;
+    const extraT = 0.12 * bird;
+    const extraL = 0.1 * bird;
     const padL = 78;
     const padR = 64;
     const padY = 34;
@@ -185,10 +225,10 @@ export class TractView {
     this.beakShown += (this.jawOpen - this.beakShown) * 0.25;
     const lipHalf = Math.max(this.shown[N - 1], 0) * 0.5 * unit;
     let beakTip = { x: lipPt.x, y: lipPt.y };
-    if (hawk > 0) {
+    if (bird > 0) {
       ctx.save();
-      ctx.globalAlpha = hawk;
-      beakTip = this.drawHawk(scale, wall, unit, lipHalf, t, still);
+      ctx.globalAlpha = bird;
+      beakTip = this.drawBird(style, scale, wall, unit, lipHalf, t, still);
       ctx.restore();
     }
 
@@ -254,8 +294,12 @@ export class TractView {
     ctx.lineTo(g.x + 2 - flutter, g.y - 3);
     ctx.stroke();
 
-    // Ondas saindo pela boca (ou pela ponta do bico), proporcionais ao nível.
-    const lip = hawk > 0.5 ? beakTip : this.pts[N];
+    // Saco vocal: bolsa na frente da garganta que infla com o som.
+    const pouch = this.drawSac(scale, unit, wall, t, still);
+
+    // Ondas saindo pela boca, pela ponta do bico, ou pelo papo quando o bico está fechado.
+    const fromPouch = pouch !== null && this.jawOpen < 0.25;
+    const lip = fromPouch ? { x: pouch.x + pouch.r, y: pouch.y } : bird > 0.5 ? beakTip : this.pts[N];
     if (this.level > 0.01) {
       ctx.strokeStyle = c.flesh;
       ctx.lineWidth = 2;
@@ -263,7 +307,8 @@ export class TractView {
         const ph = still ? k / 3 : (t * 1.6 + k / 3) % 1;
         ctx.globalAlpha = Math.min(1, this.level * 3) * (1 - ph);
         ctx.beginPath();
-        ctx.arc(lip.x, lip.y, 10 + ph * Math.min(padR - 6, scale * 0.12), -0.8 + 0.3 * hawk, 0.8 + 0.3 * hawk);
+        const tilt = fromPouch ? 0 : 0.3 * bird;
+        ctx.arc(lip.x, lip.y, 10 + ph * Math.min(padR - 6, scale * 0.12), -0.8 + tilt, 0.8 + tilt);
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
@@ -284,24 +329,97 @@ export class TractView {
       ctx.textBaseline = 'middle';
       ctx.fillText(text, x + dx + (align === 'left' ? 4 : align === 'right' ? -4 : 0), y + dy + (align === 'center' ? (dy < 0 ? -8 : 8) : 0));
     };
-    const isHawk = hawk > 0.5;
-    const back = -26 - 0.1 * hawk * scale;
-    label(1, 1, isHawk ? 'siringe' : 'glote', back, 8, 'right');
+    const isBird = bird > 0.5;
+    const back = -26 - 0.1 * bird * scale;
+    label(1, 1, isBird ? 'siringe' : 'glote', back, 8, 'right');
     label(Math.round(N * 0.22), 1, 'faringe', back, 0, 'right');
-    if (!isHawk) label(Math.round(N * 0.72), 1, 'palato', 0, -22, 'center');
-    label(Math.round(N * 0.66), -1, 'língua', 0, 26, 'center');
-    if (isHawk) {
+    if (!isBird) label(Math.round(N * 0.72), 1, 'palato', 0, -22, 'center');
+    if (pouch) label(Math.round(N * 0.66), -1, 'língua', 0.13 * scale, 14, 'left');
+    else label(Math.round(N * 0.66), -1, 'língua', 0, 26, 'center');
+    if (isBird) {
       ctx.textAlign = 'left';
       ctx.fillText('bico', beakTip.x + 6, beakTip.y + 22);
     } else label(N, 1, 'lábios', 18, -18, 'left');
+    if (pouch) {
+      ctx.textAlign = 'left';
+      ctx.fillText(isBird && this.birdKind === 'pombo' ? 'papo' : 'saco vocal', pouch.x + pouch.r + 8, pouch.y + pouch.r * 0.8 + 6);
+    }
   }
 
   /**
-   * Cabeça de gavião em vista lateral: pescoço, coroa escura, olho amarelo
-   * com sobrancelha severa e bico em gancho que abre com a mandíbula.
+   * Bolsa do saco vocal, presa ao tubo por um duto curto no ponto escolhido.
+   * O raio cresce com o tamanho e infla com o nível do som.
+   */
+  private drawSac(scale: number, unit: number, wall: number, t: number, still: boolean): { x: number; y: number; r: number } | null {
+    const target = this.sacSize;
+    this.sacShown += (target - this.sacShown) * (still ? 1 : 0.15);
+    if (this.sacShown < 0.02) return null;
+    const ctx = this.ctx;
+    const c = this.colors;
+    const j = Math.min(N - 2, Math.max(2, Math.round(this.sacPos * (N - 1))));
+    const p = this.pts[j];
+    const d = Math.max(this.shown[j], 0) * 0.5 * unit + wall;
+    // Lado da frente do tubo (oposto à nuca / ao palato).
+    const ax = p.x - p.nx * d;
+    const ay = p.y - p.ny * d;
+    const pulse = still ? 0 : Math.sin(t * 2.1) * 0.03;
+    const inflate = 1 + Math.min(1, this.level * 2.5) * 0.28 + pulse;
+    const r = scale * (0.03 + 0.085 * this.sacShown) * inflate;
+    const neck = scale * 0.035;
+    const cx = ax - p.nx * (neck + r * 0.85);
+    const cy = ay - p.ny * (neck + r * 0.85) + r * 0.35;
+    const pigeon = this.creature === 'pombo';
+
+    // Duto.
+    ctx.strokeStyle = c.ink;
+    ctx.lineWidth = Math.max(5, scale * 0.022);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(cx, cy);
+    ctx.stroke();
+    ctx.strokeStyle = c.cavity;
+    ctx.lineWidth = Math.max(2.5, scale * 0.012);
+    ctx.stroke();
+
+    // Bolsa: pele esticada, com brilho iridescente no pombo.
+    const g = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.1, cx, cy, r);
+    if (pigeon) {
+      g.addColorStop(0, c.pigeonCere);
+      g.addColorStop(0.35, c.sheenA);
+      g.addColorStop(1, c.sheenB);
+    } else {
+      g.addColorStop(0, c.paper);
+      g.addColorStop(1, c.fleshSoft);
+    }
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, r, r * 0.92, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = c.ink;
+    ctx.lineWidth = 1.25;
+    ctx.stroke();
+    // Vincos que somem quando a bolsa enche.
+    ctx.save();
+    ctx.globalAlpha *= Math.max(0, 1.4 - inflate) * 0.8;
+    ctx.strokeStyle = pigeon ? c.pigeonDark : c.flesh;
+    ctx.lineWidth = 1;
+    for (let k = -1; k <= 1; k++) {
+      ctx.beginPath();
+      ctx.arc(cx + k * r * 0.35, cy + r * 0.15, r * 0.55, 0.25 * Math.PI, 0.75 * Math.PI);
+      ctx.stroke();
+    }
+    ctx.restore();
+    return { x: cx, y: cy, r };
+  }
+
+  /**
+   * Cabeça de ave em vista lateral: pescoço, coroa, olho e bico que abre com a
+   * mandíbula. O gavião tem sobrancelha severa e bico em gancho; o pombo tem
+   * cabeça cinza, pescoço furta-cor, olho laranja e bico curto com cera branca.
    * Devolve a ponta do bico.
    */
-  private drawHawk(scale: number, wall: number, unit: number, lipHalf: number, t: number, still: boolean): { x: number; y: number } {
+  private drawBird(st: BirdStyle, scale: number, wall: number, unit: number, lipHalf: number, t: number, still: boolean): { x: number; y: number } {
     const ctx = this.ctx;
     const c = this.colors;
     const pts = this.pts;
@@ -324,21 +442,34 @@ export class TractView {
     head.bezierCurveTo(lip.x - 0.08 * s, hy + 0.2 * s, glot.x + neckHalf + 0.08 * s, hy + 0.14 * s, glot.x + neckHalf + 0.02 * s, glot.y - 0.18 * s);
     head.lineTo(glot.x + neckHalf + 0.08 * s, glot.y + 0.04 * s);
     head.closePath();
-    ctx.fillStyle = c.feather;
+    ctx.fillStyle = c[st.feather];
     ctx.fill(head);
     ctx.save();
     ctx.clip(head);
-    // Coroa escura e faixa da bochecha (o "bigode" das aves de rapina).
-    ctx.fillStyle = c.featherDark;
+    // Coroa mais escura.
+    ctx.fillStyle = c[st.crown];
     ctx.beginPath();
     ctx.ellipse(hx - 0.04 * s, hy - 0.24 * s, 0.3 * s, 0.14 * s, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = c.featherLight;
-    ctx.beginPath();
-    ctx.ellipse(lip.x - 0.12 * s, hy + 0.17 * s, 0.13 * s, 0.1 * s, 0.4, 0, Math.PI * 2);
-    ctx.fill();
+    // Gavião: garganta clara. Pombo: faixa furta-cor no pescoço.
+    if (st.throat) {
+      ctx.fillStyle = c[st.throat];
+      ctx.beginPath();
+      ctx.ellipse(lip.x - 0.12 * s, hy + 0.17 * s, 0.13 * s, 0.1 * s, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (st.sheen) {
+      const band = ctx.createLinearGradient(glot.x - 0.2 * s, 0, glot.x + 0.25 * s, 0);
+      band.addColorStop(0, c.sheenB);
+      band.addColorStop(0.5, c.sheenA);
+      band.addColorStop(1, c.sheenB);
+      ctx.fillStyle = band;
+      ctx.beginPath();
+      ctx.ellipse(glot.x + 0.02 * s, glot.y - 0.2 * s, 0.32 * s, 0.13 * s, -0.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
     // Penas: escamas curtas em fileiras desencontradas.
-    ctx.strokeStyle = c.featherDark;
+    ctx.strokeStyle = c[st.crown];
     ctx.globalAlpha *= 0.45;
     ctx.lineWidth = 1;
     const step = Math.max(7, 0.028 * s);
@@ -355,12 +486,19 @@ export class TractView {
     ctx.lineWidth = 1.25;
     ctx.stroke(head);
 
-    // Olho com sobrancelha (o ar sério do gavião). Pisca de vez em quando.
+    // Olho (com sobrancelha severa no gavião). Pisca de vez em quando.
     const ex = lip.x - 0.17 * s;
     const ey = topY - 0.075 * s;
     const er = 0.034 * s;
     const blink = still ? 1 : t % 4.3 < 0.12 ? 0.15 : 1;
-    ctx.fillStyle = c.iris;
+    if (!st.brow) {
+      // Anel claro em volta do olho do pombo.
+      ctx.fillStyle = c[st.cere];
+      ctx.beginPath();
+      ctx.ellipse(ex, ey, er * 1.35, er * 1.35 * blink, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = c[st.iris];
     ctx.beginPath();
     ctx.ellipse(ex, ey, er, er * blink, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -377,32 +515,34 @@ export class TractView {
       ctx.arc(ex + er * 0.32, ey - er * 0.3, er * 0.16, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.strokeStyle = c.featherDark;
-    ctx.lineWidth = Math.max(2.5, 0.014 * s);
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(ex - er * 1.5, ey - er * 1.25);
-    ctx.quadraticCurveTo(ex, ey - er * 1.55, ex + er * 1.7, ey - er * 0.7);
-    ctx.stroke();
+    if (st.brow) {
+      ctx.strokeStyle = c.featherDark;
+      ctx.lineWidth = Math.max(2.5, 0.014 * s);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(ex - er * 1.5, ey - er * 1.25);
+      ctx.quadraticCurveTo(ex, ey - er * 1.55, ex + er * 1.7, ey - er * 0.7);
+      ctx.stroke();
+    }
 
-    // Bico: maxila em gancho e mandíbula que gira para abrir.
+    // Bico: maxila (em gancho no gavião) e mandíbula que gira para abrir.
     const open = this.beakShown;
     const baseTop = { x: lip.x - 0.015 * s, y: topY - 0.035 * s };
     const gapTop = lip.y - lipHalf * 0.6;
-    const len = 0.21 * s;
+    const len = st.beakLen * s;
     const lift = open * 0.12;
     const tip = {
       x: lip.x + len * Math.cos(lift),
-      y: gapTop - len * Math.sin(lift) + 0.055 * s,
+      y: gapTop - len * Math.sin(lift) + 0.055 * s * st.hook,
     };
     ctx.fillStyle = c.beak;
     ctx.strokeStyle = c.ink;
     ctx.lineWidth = 1.25;
     ctx.beginPath();
     ctx.moveTo(baseTop.x, baseTop.y);
-    ctx.bezierCurveTo(lip.x + 0.1 * s, baseTop.y - 0.02 * s, tip.x + 0.03 * s, gapTop - 0.04 * s, tip.x, tip.y);
-    // Gancho voltando por baixo.
-    ctx.quadraticCurveTo(tip.x - 0.02 * s, tip.y - 0.035 * s, tip.x - 0.05 * s, gapTop + 0.005 * s);
+    ctx.bezierCurveTo(lip.x + len * 0.48, baseTop.y - 0.02 * s, tip.x + 0.03 * s * st.hook, gapTop - 0.04 * s * st.hook, tip.x, tip.y);
+    // Ponta voltando por baixo (o gancho, no gavião).
+    ctx.quadraticCurveTo(tip.x - 0.02 * s, tip.y - 0.035 * s * st.hook, tip.x - 0.05 * s * st.hook - 0.01 * s, gapTop + 0.005 * s);
     ctx.lineTo(lip.x, gapTop);
     ctx.closePath();
     ctx.fill();
@@ -410,7 +550,7 @@ export class TractView {
 
     const jawAngle = 0.06 + open * 0.42;
     const gapBot = lip.y + lipHalf * 0.6;
-    const lowLen = 0.15 * s;
+    const lowLen = st.beakLen * 0.72 * s;
     const lowTip = { x: lip.x + lowLen * Math.cos(jawAngle), y: gapBot + lowLen * Math.sin(jawAngle) };
     ctx.beginPath();
     ctx.moveTo(lip.x, gapBot);
@@ -420,8 +560,8 @@ export class TractView {
     ctx.fill();
     ctx.stroke();
 
-    // Cera amarela na base, com a narina.
-    ctx.fillStyle = c.cere;
+    // Cera na base (amarela no gavião, branca e carnuda no pombo), com a narina.
+    ctx.fillStyle = c[st.cere];
     ctx.beginPath();
     ctx.moveTo(baseTop.x - 0.005 * s, baseTop.y - 0.004 * s);
     ctx.quadraticCurveTo(lip.x + 0.05 * s, baseTop.y - 0.012 * s, lip.x + 0.065 * s, baseTop.y + 0.02 * s);

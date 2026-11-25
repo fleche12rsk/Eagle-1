@@ -4,6 +4,7 @@
  */
 
 import { Glottis } from './glottis';
+import { VocalSac, type SacParams } from './sac';
 import { computeDiameters, type AnatomyShape } from './shape';
 import { Tract, type TractParams } from './tract';
 import { Rng, SmoothNoise, midiToHz } from './util';
@@ -12,7 +13,7 @@ export const OVERSAMPLE = 2;
 export const DEFAULT_SEGMENTS = 44;
 
 /** Parâmetros físicos que a voz lê a cada bloco (já suavizados pelo motor). */
-export interface VoiceParams extends AnatomyShape {
+export interface VoiceParams extends AnatomyShape, SacParams {
   fineTune: number; // cents
   transpose: number; // semitons
   fry: number;
@@ -48,6 +49,7 @@ const enum Stage {
 export class Voice {
   readonly tract: Tract;
   private readonly glottis: Glottis;
+  private readonly sac: VocalSac;
   private readonly rateInt: number;
   private readonly tractParams: TractParams = { glottalReflection: 0.75, lipReflection: -0.85, damping: 0.9995 };
   private readonly drift: SmoothNoise;
@@ -75,6 +77,7 @@ export class Voice {
     this.rateInt = fs * OVERSAMPLE;
     this.tract = new Tract(segments, this.rateInt);
     this.glottis = new Glottis(this.rateInt, seed);
+    this.sac = new VocalSac(this.rateInt);
     this.drift = new SmoothNoise(new Rng(seed * 7919 + 13));
   }
 
@@ -175,6 +178,14 @@ export class Voice {
     }
     tract.beginBlock(shapeCoef, frames);
 
+    // Saco vocal: ponto de ligação, quanto irradia e quanto rouba do tubo.
+    const sac = this.sac;
+    const sacOn = p.sacSize > 0.002;
+    if (sacOn) sac.configure(p);
+    const sacJ = Math.min(tract.n - 2, Math.max(1, Math.round(p.sacPos * (tract.n - 1))));
+    const sacRad = sacOn ? p.sacCouple * (2 + 8 * p.sacSize) * Math.min(1, p.sacSize * 8) : 0;
+    const sacFb = sacOn ? 0.4 * p.sacCouple * Math.min(1, p.sacSize * 8) : 0;
+
     const dt = 1 / fs;
     const glideCoef = p.glide <= 0.0005 ? 1 : 1 - Math.exp(-dt / (p.glide * 0.35));
     const atkInc = dt / Math.max(p.attack, 0.001);
@@ -220,6 +231,7 @@ export class Voice {
             if (this.pendingNote >= 0) {
               tract.reset();
               glottis.reset();
+              sac.reset();
               this.start(this.pendingNote, this.pendingVel, true);
               this.pendingNote = -1;
             } else {
@@ -259,9 +271,19 @@ export class Voice {
 
       // Oversampling 2x: duas passadas no tubo, média simples como decimação.
       const g1 = glottis.next(freq, p);
-      const y1 = tract.step(g1, tp);
+      let y1 = tract.step(g1, tp);
+      if (sacOn) {
+        const sv = sac.process(tract.pressureAt(sacJ));
+        tract.inject(sacJ, -sacFb * (sv > 1 ? 1 : sv < -1 ? -1 : sv));
+        y1 += sacRad * sv;
+      }
       const g2 = glottis.next(freq, p);
-      const y2 = tract.step(g2, tp);
+      let y2 = tract.step(g2, tp);
+      if (sacOn) {
+        const sv = sac.process(tract.pressureAt(sacJ));
+        tract.inject(sacJ, -sacFb * (sv > 1 ? 1 : sv < -1 ? -1 : sv));
+        y2 += sacRad * sv;
+      }
       const y = 0.5 * (y1 + y2) * this.env * this.stealGain * amp;
 
       out[offset + s] += y;

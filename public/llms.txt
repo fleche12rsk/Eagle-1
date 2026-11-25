@@ -8,6 +8,8 @@ O Goela gera som por modelo físico, sem gravações. Uma fonte glotal (modelo L
 
 ## Recursos atuais
 
+- Saco vocal: ressonador lateral (tamanho, elasticidade, amortecimento, posição, acoplamento) que irradia som e infla na tela.
+- Criatura Pombo: arrulho de bico fechado, com o som saindo pelo papo inflado (`?criatura=pombo`).
 - Criatura padrão: um gavião. O grito sobe e despenca de altura, rouco, com o tubo curto como um bico; a voz humana fica a um clique (ou em `/?criatura=humano`).
 - Voz única tocada pelo teclado na tela ou pelo teclado do computador, com glide entre notas ligadas.
 - Botões de vogais A, E, I, O e U e um quadro vocálico X/Y que move a língua.
@@ -17,7 +19,7 @@ O Goela gera som por modelo físico, sem gravações. Uma fonte glotal (modelo L
 
 ## Em desenvolvimento
 
-Ramo nasal, saco vocal (ressonador como o de um sapo), 16 vozes de polifonia, Web MIDI e MPE, matriz de modulação, morph e mutação de criaturas, áudio externo pelo trato, efeitos e presets.
+Ramo nasal, 16 vozes de polifonia, Web MIDI e MPE, matriz de modulação, morph e mutação de criaturas, áudio externo pelo trato, efeitos e presets.
 
 ## Páginas
 

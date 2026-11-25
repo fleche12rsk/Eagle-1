@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Goela: sintetizador de voz de gavião e trato vocal online</title>
-    <meta name="description" content="Goela é um sintetizador que simula garganta, língua e bico no navegador. Faça o grito de um gavião, forme vogais e crie vozes de criaturas. Grátis." />
+    <meta name="description" content="Goela é um sintetizador que simula garganta, bico e saco vocal no navegador. Faça o grito de um gavião, o arrulho de um pombo e vozes de criaturas. Grátis." />
     <meta name="theme-color" content="#f1ebe0" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#171411" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
@@ -66,6 +66,7 @@
             <div class="creatures" role="group" aria-labelledby="criatura-rotulo">
               <span id="criatura-rotulo" class="creatures-label">Criatura</span>
               <button type="button" data-creature="gaviao" aria-pressed="true" aria-describedby="creature-blurb">Gavião</button>
+              <button type="button" data-creature="pombo" aria-pressed="false" aria-describedby="creature-blurb">Pombo</button>
               <button type="button" data-creature="humano" aria-pressed="false" aria-describedby="creature-blurb">Humano</button>
             </div>
             <p id="creature-blurb" class="creature-blurb">Grito rouco e agudo que sobe e despenca. Segure a tecla.</p>
@@ -138,14 +139,18 @@
         <h3>Por que um gavião?</h3>
         <p>O grito de um gavião é agudo, rouco e cai de altura no fim: um "kiii-ahh". Para chegar perto disso, o Goela encurta o tubo para 42% do tamanho humano (um bico, não uma boca), sobe a nota duas oitavas, aperta a glote e soma rouquidão com fry, um sub-harmônico que alterna ciclos fortes e fracos. Um envelope de pitch faz a nota subir rápido e despencar abaixo de onde começou. Na ave de verdade o som nasce na siringe, no fundo do peito, e não numa glote, mas a física do tubo que molda o som é parecida.</p>
 
+        <h3>E o pombo?</h3>
+        <p>O pombo arrulha de bico fechado. O ar enche o papo, uma bolsa no pescoço, e é a pele dessa bolsa que vibra e solta o "hu-rruu". No Goela isso é o saco vocal: um ressonador ligado a um ponto do tubo, com tamanho, elasticidade, amortecimento, posição e acoplamento. Ele soa por conta própria e também rouba energia do tubo na frequência dele. Feche o bico do pombo e tire o saco: sobra quase silêncio. Sapos e bugios usam o mesmo truque.</p>
+
         <h3>O que já dá para fazer</h3>
         <ul>
-          <li>Trocar a criatura entre gavião e humano com um clique.</li>
+          <li>Trocar a criatura entre gavião, pombo e humano com um clique.</li>
+          <li>Ligar um saco vocal em qualquer criatura e ver a bolsa inflar com o som.</li>
           <li>Tocar uma voz pelo teclado na tela ou pelo teclado do computador, com glide entre notas ligadas.</li>
           <li>Formar as vogais A, E, I, O e U com um clique, ou passear entre elas no quadro vocálico.</li>
           <li>Ajustar língua, mandíbula, lábios, comprimento do trato, tensão da glote, sopro, fry, vibrato, transposição, envelope de volume e envelope de pitch.</li>
         </ul>
-        <p class="prose-note">Em breve: nariz, saco vocal de sapo, 16 vozes, MIDI e MPE, modulação, mutação de criaturas e efeitos.</p>
+        <p class="prose-note">Em breve: nariz, 16 vozes, MIDI e MPE, modulação, mutação de criaturas e efeitos.</p>
       </section>
     </main>
 

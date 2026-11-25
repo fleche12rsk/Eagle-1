@@ -18,6 +18,12 @@
   --beak: #43464c;
   --cere: #e0b43a;
   --iris: #e6a81e;
+  --pigeon: #9aa1ab;
+  --pigeon-dark: #69717e;
+  --pigeon-iris: #e8742a;
+  --pigeon-cere: #f1ece4;
+  --sheen-a: #3f8f6b;
+  --sheen-b: #7c4f93;
 
   --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'URW Palladio L', P052, 'Book Antiqua', Georgia, serif;
   --mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace;
@@ -44,6 +50,9 @@
     --feather-dark: #3a2414;
     --feather-light: #b89c74;
     --beak: #2c2e33;
+    --pigeon: #6c737d;
+    --pigeon-dark: #474e58;
+    --pigeon-cere: #cfc8bd;
   }
 }
 

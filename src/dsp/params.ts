@@ -27,7 +27,7 @@ export interface ParamDef {
   display?: number;
 }
 
-export type ParamGroup = 'glote' | 'lingua' | 'mandibula' | 'labios' | 'trato' | 'envelope' | 'pitch' | 'saida';
+export type ParamGroup = 'glote' | 'lingua' | 'mandibula' | 'labios' | 'trato' | 'saco' | 'envelope' | 'pitch' | 'saida';
 
 export const GROUP_LABELS: Record<ParamGroup, string> = {
   glote: 'Glote',
@@ -35,6 +35,7 @@ export const GROUP_LABELS: Record<ParamGroup, string> = {
   mandibula: 'Mandíbula',
   labios: 'Lábios',
   trato: 'Trato',
+  saco: 'Saco vocal',
   envelope: 'Envelope',
   pitch: 'Envelope de pitch',
   saida: 'Saída',
@@ -69,6 +70,13 @@ export const PARAMS = [
 
   // Trato
   p({ id: 'tractLength', group: 'trato', label: 'Comprimento', labelEn: 'Length', hint: 'Tamanho do tubo: curto como um bico ou longo como um gigante. Vale a partir da próxima nota.', min: 0.4, max: 3, def: 1, unit: '%', curve: 'exp', digits: 0, display: 100 }),
+
+  // Saco vocal
+  p({ id: 'sacSize', group: 'saco', label: 'Tamanho', labelEn: 'Size', hint: 'Zero desliga o saco. Maior = ressonância mais grave e mais som saindo por ele.', min: 0, max: 1, def: 0, unit: '%', curve: 'lin', digits: 0, display: 100 }),
+  p({ id: 'sacElastic', group: 'saco', label: 'Elasticidade', labelEn: 'Elasticity', hint: 'Pele mais esticada afina a ressonância para cima.', min: 0, max: 1, def: 0.5, unit: '%', curve: 'lin', digits: 0, display: 100 }),
+  p({ id: 'sacDamp', group: 'saco', label: 'Amortecimento', labelEn: 'Damping', hint: 'Pouco amortecimento faz o saco continuar vibrando depois do som.', min: 0, max: 1, def: 0.4, unit: '%', curve: 'lin', digits: 0, display: 100 }),
+  p({ id: 'sacPos', group: 'saco', label: 'Posição', labelEn: 'Position', hint: 'Onde o saco se liga ao tubo: perto da garganta ou da boca.', min: 0, max: 1, def: 0.3, unit: '%', curve: 'lin', digits: 0, display: 100 }),
+  p({ id: 'sacCouple', group: 'saco', label: 'Acoplamento', labelEn: 'Coupling', hint: 'Quanto som passa pelo saco.', min: 0, max: 1, def: 0.6, unit: '%', curve: 'lin', digits: 0, display: 100 }),
 
   // Envelope de amplitude
   p({ id: 'attack', group: 'envelope', label: 'Ataque', labelEn: 'Attack', hint: 'Tempo para a voz chegar ao volume cheio.', min: 0.002, max: 3, def: 0.04, unit: 's', curve: 'exp', digits: 3 }),

@@ -41,7 +41,7 @@ export class Engine {
     this.mix = new Float32Array(Math.max(maxBlock, 128));
     this.limRelease = onePoleCoef(0.12, fs);
     this.vp = {
-      fineTune: 0, transpose: 0, fry: 0, tractLength: 1, pitchAmt: 0, pitchAtk: 0.05, pitchDec: 0.5, pitchSus: 0, rd: 1, aspiration: 0, jitter: 0, shimmer: 0, vibRate: 0, vibDepth: 0, vibDelay: 0,
+      fineTune: 0, transpose: 0, fry: 0, tractLength: 1, pitchAmt: 0, pitchAtk: 0.05, pitchDec: 0.5, pitchSus: 0, sacSize: 0, sacElastic: 0.5, sacDamp: 0.4, sacPos: 0.3, sacCouple: 0.6, rd: 1, aspiration: 0, jitter: 0, shimmer: 0, vibRate: 0, vibDepth: 0, vibDelay: 0,
       attack: 0.01, decay: 0.1, sustain: 1, release: 0.1, glide: 0,
       tonguePos: 0.5, tongueHeight: 0.5, jaw: 0.5, lipOpen: 0.5, lipProtrusion: 0, lipWidth: 0.5,
     };
@@ -121,6 +121,11 @@ export class Engine {
     v.pitchAtk = ph(P.pitchAtk);
     v.pitchDec = ph(P.pitchDec);
     v.pitchSus = ph(P.pitchSus);
+    v.sacSize = ph(P.sacSize);
+    v.sacElastic = ph(P.sacElastic);
+    v.sacDamp = ph(P.sacDamp);
+    v.sacPos = ph(P.sacPos);
+    v.sacCouple = ph(P.sacCouple);
     v.rd = ph(P.tension);
     v.aspiration = ph(P.aspiration);
     v.jitter = ph(P.jitter);
