@@ -1,10 +1,10 @@
-# bleh 3
+# Bota Ultra-Garganta 3000
 
-> bleh 3 é um sintetizador de trato vocal gratuito que roda no navegador: simula glote, garganta, língua e lábios (ou bico) para gerar vozes, vogais e sons de criaturas, como o grito de um gavião, em tempo real.
+> Bota Ultra-Garganta 3000 é um sintetizador de trato vocal gratuito que roda no navegador: simula glote, garganta, língua e lábios (ou bico) para gerar vozes, vogais e sons de criaturas, como o grito de um gavião, em tempo real.
 
 ## O que ele faz
 
-O bleh 3 gera som por modelo físico, sem gravações. Uma fonte glotal (modelo LF de Liljencrants-Fant, controlado pelo parâmetro Rd) excita um tubo de 44 segmentos simulado como guia de onda Kelly-Lochbaum. O formato do tubo sai de parâmetros anatômicos (posição e altura da língua, abertura da mandíbula, abertura, protrusão e largura dos lábios), e é isso que define a vogal e o timbre. Toda a síntese acontece num AudioWorklet, dentro do navegador do usuário.
+O Bota Ultra-Garganta 3000 gera som por modelo físico, sem gravações. Uma fonte glotal (modelo LF de Liljencrants-Fant, controlado pelo parâmetro Rd) excita um tubo de 44 segmentos simulado como guia de onda Kelly-Lochbaum. O formato do tubo sai de parâmetros anatômicos (posição e altura da língua, abertura da mandíbula, abertura, protrusão e largura dos lábios), e é isso que define a vogal e o timbre. Toda a síntese acontece num AudioWorklet, dentro do navegador do usuário.
 
 ## Recursos atuais
 
