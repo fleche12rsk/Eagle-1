@@ -90,7 +90,7 @@ describe('motor', () => {
 
     const voices = Array.from({ length: 16 }, (_, i) => new Voice(FS, i + 1));
     const vp = {
-      fineTune: 0, rd: 1.1, aspiration: 0.1, jitter: 0.2, shimmer: 0.1, vibRate: 5, vibDepth: 20, vibDelay: 0.3,
+      fineTune: 0, transpose: 0, fry: 0, tractLength: 1, pitchAmt: 0, pitchAtk: 0.05, pitchDec: 0.5, pitchSus: 0, rd: 1.1, aspiration: 0.1, jitter: 0.2, shimmer: 0.1, vibRate: 5, vibDepth: 20, vibDelay: 0.3,
       attack: 0.01, decay: 0.2, sustain: 0.8, release: 0.3, glide: 0.05, ...VOWELS.A,
     };
     voices.forEach((v, i) => {

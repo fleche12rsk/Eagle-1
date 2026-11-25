@@ -1,6 +1,6 @@
 # Goela
 
-> Goela é um sintetizador de trato vocal gratuito que roda no navegador: simula glote, garganta, língua e lábios para gerar vozes, vogais e sons de criaturas em tempo real.
+> Goela é um sintetizador de trato vocal gratuito que roda no navegador: simula glote, garganta, língua e lábios (ou bico) para gerar vozes, vogais e sons de criaturas, como o grito de um gavião, em tempo real.
 
 ## O que ele faz
 
@@ -8,9 +8,10 @@ O Goela gera som por modelo físico, sem gravações. Uma fonte glotal (modelo L
 
 ## Recursos atuais
 
+- Criatura padrão: um gavião. O grito sobe e despenca de altura, rouco, com o tubo curto como um bico; a voz humana fica a um clique (ou em `/?criatura=humano`).
 - Voz única tocada pelo teclado na tela ou pelo teclado do computador, com glide entre notas ligadas.
 - Botões de vogais A, E, I, O e U e um quadro vocálico X/Y que move a língua.
-- Controles de tensão da glote (Rd), aspiração, jitter, shimmer, vibrato, envelope ADSR e volume.
+- Controles de tensão da glote (Rd), aspiração, jitter, shimmer, fry (sub-harmônico), vibrato, transposição, comprimento do trato, envelope ADSR de volume, envelope de pitch e volume.
 - Visualização animada do corte do trato vocal, osciloscópio e medidor de nível.
 - Funciona em celular e desktop, sem cadastro e sem instalar nada.
 
@@ -20,7 +21,7 @@ Ramo nasal, saco vocal (ressonador como o de um sapo), 16 vozes de polifonia, We
 
 ## Páginas
 
-- [Sintetizador e explicação](/): o instrumento e um texto sobre como funciona um sintetizador de trato vocal.
+- [Sintetizador e explicação](/): o instrumento (começa como gavião) e um texto sobre como funciona um sintetizador de trato vocal.
 - [Política de Privacidade](/privacidade/): o que o site guarda (nada é enviado para servidores).
 
 ## Autor

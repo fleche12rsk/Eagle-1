@@ -12,6 +12,12 @@
   --cavity: #3b1f1a;
   --key-white: #fbf8f2;
   --key-black: #2a221c;
+  --feather: #b5824c;
+  --feather-dark: #5e3b22;
+  --feather-light: #ecdcc0;
+  --beak: #43464c;
+  --cere: #e0b43a;
+  --iris: #e6a81e;
 
   --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'URW Palladio L', P052, 'Book Antiqua', Georgia, serif;
   --mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace;
@@ -34,6 +40,10 @@
     --cavity: #0c0807;
     --key-white: #e9e0d0;
     --key-black: #120e0b;
+    --feather: #8a5d33;
+    --feather-dark: #3a2414;
+    --feather-light: #b89c74;
+    --beak: #2c2e33;
   }
 }
 
@@ -287,8 +297,8 @@ h1 {
 }
 
 .meter {
-  flex: 1 1 120px;
-  max-width: 260px;
+  flex: 0 1 180px;
+  min-width: 100px;
   height: 8px;
   border: 1px solid var(--ink);
   background: repeating-linear-gradient(90deg, transparent 0 9px, var(--rule) 9px 10px);
@@ -320,6 +330,51 @@ h1 {
 #note-out {
   display: inline-block;
   min-width: 4.5ch;
+}
+
+/* Seletor de criatura */
+
+.creatures {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.creatures-label {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin-right: 0.2rem;
+}
+
+.creatures button {
+  min-height: 44px;
+  padding: 0.3rem 0.85rem;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper);
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.creatures button:hover {
+  background: var(--paper-deep);
+}
+
+.creatures button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.creature-blurb {
+  margin: 0;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink-2);
+  flex: 1 1 14rem;
 }
 
 /* Figura do trato */

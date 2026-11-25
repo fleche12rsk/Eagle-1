@@ -14,6 +14,13 @@ export const DEFAULT_SEGMENTS = 44;
 /** Parâmetros físicos que a voz lê a cada bloco (já suavizados pelo motor). */
 export interface VoiceParams extends AnatomyShape {
   fineTune: number; // cents
+  transpose: number; // semitons
+  fry: number;
+  tractLength: number; // 1 = adulto (44 segmentos)
+  pitchAmt: number; // semitons
+  pitchAtk: number; // s
+  pitchDec: number; // s
+  pitchSus: number; // -1..1, fração de pitchAmt
   rd: number;
   aspiration: number;
   jitter: number;
@@ -57,6 +64,10 @@ export class Voice {
   private pendingNote = -1;
   private pendingVel = 0;
   private stealGain = 1;
+  /** Envelope de pitch: valor (0..1, pode ficar negativo) e fase. */
+  private pEnv = 0;
+  private pAttacking = false;
+  private anatomy: AnatomyShape | null = null;
   /** Nível de saída recente (para a interface). */
   level = 0;
 
@@ -77,7 +88,17 @@ export class Voice {
 
   /** Aplica a anatomia ao alvo do trato. */
   setAnatomy(a: AnatomyShape): void {
+    this.anatomy = a;
     computeDiameters(a, this.tract.target);
+  }
+
+  /** Ajusta o comprimento do tubo. Só tem efeito com a voz em silêncio. */
+  private applyLength(length: number): void {
+    const n = DEFAULT_SEGMENTS * length;
+    if (Math.round(n) === this.tract.n) return;
+    this.tract.setSegments(n);
+    if (this.anatomy) computeDiameters(this.anatomy, this.tract.target);
+    this.tract.snapToTarget();
   }
 
   /** Começa uma nota. Se `legato`, só escorrega o pitch sem reiniciar o envelope. */
@@ -112,7 +133,12 @@ export class Voice {
     this.vibPhase = 0;
     this.env = 0;
     this.stealGain = 1;
+    this.pEnv = 0;
+    this.pAttacking = true;
+    this.needsLength = true;
   }
+
+  private needsLength = true;
 
   noteOff(): void {
     if (this.stage === Stage.Idle || this.stage === Stage.Release) return;
@@ -142,6 +168,11 @@ export class Voice {
     }
     const fs = this.fs;
     const tract = this.tract;
+    if (this.needsLength) {
+      // Início de nota: o tubo está em silêncio, dá para trocar o comprimento.
+      this.applyLength(p.tractLength);
+      this.needsLength = false;
+    }
     tract.beginBlock(shapeCoef, frames);
 
     const dt = 1 / fs;
@@ -150,6 +181,9 @@ export class Voice {
     const decCoef = 1 - Math.exp(-dt / Math.max(p.decay * 0.3, 0.001));
     const relCoef = 1 - Math.exp(-dt / Math.max(p.release * 0.3, 0.001));
     const stealDec = dt / 0.005;
+    const pAtkInc = dt / Math.max(p.pitchAtk, 0.001);
+    const pDecCoef = 1 - Math.exp(-dt / Math.max(p.pitchDec * 0.3, 0.001));
+    const baseCents = p.fineTune + p.transpose * 100;
     const tp = this.tractParams;
     const glottis = this.glottis;
     const amp = 0.35 + 0.65 * this.velocity;
@@ -206,8 +240,20 @@ export class Voice {
       if (this.vibPhase >= 1) this.vibPhase -= 1;
       const vib = Math.sin(2 * Math.PI * this.vibPhase) * p.vibDepth * vibRamp;
       const drift = this.drift.next(3 * dt) * 4 * (0.3 + p.jitter);
-      const cents = p.fineTune + vib + drift;
-      const freq = Math.pow(2, this.logF + cents / 1200);
+      // Envelope de pitch: sobe até 1 e escorrega até pitchSus.
+      if (this.pAttacking) {
+        this.pEnv += pAtkInc;
+        if (this.pEnv >= 1) {
+          this.pEnv = 1;
+          this.pAttacking = false;
+        }
+      } else {
+        this.pEnv += (p.pitchSus - this.pEnv) * pDecCoef;
+      }
+      const cents = baseCents + vib + drift + p.pitchAmt * this.pEnv * 100;
+      let freq = Math.pow(2, this.logF + cents / 1200);
+      // Teto bem abaixo do Nyquist interno, para o pulso não serrilhar.
+      if (freq > 6000) freq = 6000;
 
       tract.advance();
 

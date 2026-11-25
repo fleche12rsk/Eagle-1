@@ -26,7 +26,7 @@ describe('fonte glotal LF', () => {
 
   test('gerador com jitter, shimmer e aspiração no máximo continua finito', () => {
     const g = new Glottis(96000, 7);
-    const p = { rd: 2.7, aspiration: 1, jitter: 1, shimmer: 1 };
+    const p = { rd: 2.7, aspiration: 1, jitter: 1, shimmer: 1, fry: 1 };
     let peak = 0;
     for (let i = 0; i < 96000; i++) {
       const v = g.next(30 + (i % 2000), p);

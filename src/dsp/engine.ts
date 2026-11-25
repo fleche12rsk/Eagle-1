@@ -41,7 +41,7 @@ export class Engine {
     this.mix = new Float32Array(Math.max(maxBlock, 128));
     this.limRelease = onePoleCoef(0.12, fs);
     this.vp = {
-      fineTune: 0, rd: 1, aspiration: 0, jitter: 0, shimmer: 0, vibRate: 0, vibDepth: 0, vibDelay: 0,
+      fineTune: 0, transpose: 0, fry: 0, tractLength: 1, pitchAmt: 0, pitchAtk: 0.05, pitchDec: 0.5, pitchSus: 0, rd: 1, aspiration: 0, jitter: 0, shimmer: 0, vibRate: 0, vibDepth: 0, vibDelay: 0,
       attack: 0.01, decay: 0.1, sustain: 1, release: 0.1, glide: 0,
       tonguePos: 0.5, tongueHeight: 0.5, jaw: 0.5, lipOpen: 0.5, lipProtrusion: 0, lipWidth: 0.5,
     };
@@ -114,6 +114,13 @@ export class Engine {
     const v = this.vp;
     const ph = (i: number) => toPhysical(PARAMS[i], c[i]);
     v.fineTune = ph(P.fineTune);
+    v.transpose = ph(P.transpose);
+    v.fry = ph(P.fry);
+    v.tractLength = ph(P.tractLength);
+    v.pitchAmt = ph(P.pitchAmt);
+    v.pitchAtk = ph(P.pitchAtk);
+    v.pitchDec = ph(P.pitchDec);
+    v.pitchSus = ph(P.pitchSus);
     v.rd = ph(P.tension);
     v.aspiration = ph(P.aspiration);
     v.jitter = ph(P.jitter);

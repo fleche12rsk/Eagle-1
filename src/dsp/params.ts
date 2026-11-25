@@ -27,14 +27,16 @@ export interface ParamDef {
   display?: number;
 }
 
-export type ParamGroup = 'glote' | 'lingua' | 'mandibula' | 'labios' | 'envelope' | 'saida';
+export type ParamGroup = 'glote' | 'lingua' | 'mandibula' | 'labios' | 'trato' | 'envelope' | 'pitch' | 'saida';
 
 export const GROUP_LABELS: Record<ParamGroup, string> = {
   glote: 'Glote',
   lingua: 'Língua',
   mandibula: 'Mandíbula',
   labios: 'Lábios',
+  trato: 'Trato',
   envelope: 'Envelope',
+  pitch: 'Envelope de pitch',
   saida: 'Saída',
 };
 
@@ -43,10 +45,12 @@ const p = (d: ParamDef) => d;
 export const PARAMS = [
   // Glote
   p({ id: 'fineTune', group: 'glote', label: 'Pitch fino', labelEn: 'Fine pitch', hint: 'Afinação fina, em cents.', min: -100, max: 100, def: 0, unit: 'ct', curve: 'lin', digits: 0 }),
+  p({ id: 'transpose', group: 'glote', label: 'Transpor', labelEn: 'Transpose', hint: 'Sobe ou desce todas as notas, em semitons.', min: -36, max: 36, def: 0, unit: 'st', curve: 'lin', digits: 0 }),
   p({ id: 'tension', group: 'glote', label: 'Tensão', labelEn: 'Tension', hint: 'Rd da glote. Baixo soa apertado, alto soa soproso.', min: 0.3, max: 2.7, def: 1.1, unit: 'Rd', curve: 'lin', invert: true, digits: 2 }),
   p({ id: 'aspiration', group: 'glote', label: 'Aspiração', labelEn: 'Aspiration', hint: 'Ruído de sopro junto com a voz.', min: 0, max: 1, def: 0.12, unit: '%', curve: 'lin', digits: 0, display: 100 }),
   p({ id: 'jitter', group: 'glote', label: 'Jitter', labelEn: 'Jitter', hint: 'Pequenas variações de altura, ciclo a ciclo.', min: 0, max: 1, def: 0.15, unit: '%', curve: 'lin', digits: 0, display: 100 }),
   p({ id: 'shimmer', group: 'glote', label: 'Shimmer', labelEn: 'Shimmer', hint: 'Pequenas variações de volume, ciclo a ciclo.', min: 0, max: 1, def: 0.1, unit: '%', curve: 'lin', digits: 0, display: 100 }),
+  p({ id: 'fry', group: 'glote', label: 'Fry', labelEn: 'Fry', hint: 'Sub-harmônico: um ciclo forte, outro fraco. Deixa a voz rouca, rasgada.', min: 0, max: 1, def: 0, unit: '%', curve: 'lin', digits: 0, display: 100 }),
   p({ id: 'vibRate', group: 'glote', label: 'Vibrato taxa', labelEn: 'Vibrato rate', hint: 'Velocidade do vibrato.', min: 0, max: 12, def: 5.2, unit: 'Hz', curve: 'lin', digits: 1 }),
   p({ id: 'vibDepth', group: 'glote', label: 'Vibrato prof.', labelEn: 'Vibrato depth', hint: 'Quanto o vibrato sobe e desce a nota.', min: 0, max: 100, def: 18, unit: 'ct', curve: 'sq', digits: 0 }),
   p({ id: 'vibDelay', group: 'glote', label: 'Vibrato atraso', labelEn: 'Vibrato delay', hint: 'Tempo até o vibrato aparecer na nota.', min: 0, max: 2, def: 0.35, unit: 's', curve: 'sq', digits: 2 }),
@@ -63,12 +67,21 @@ export const PARAMS = [
   p({ id: 'lipProtrusion', group: 'labios', label: 'Protrusão', labelEn: 'Protrusion', hint: 'Faz bico e alonga o tubo (u, ô).', min: 0, max: 1, def: 0, unit: '%', curve: 'lin', digits: 0, display: 100 }),
   p({ id: 'lipWidth', group: 'labios', label: 'Largura', labelEn: 'Width', hint: 'Sorriso largo ou boca estreita.', min: 0, max: 1, def: 0.9, unit: '%', curve: 'lin', digits: 0, display: 100 }),
 
+  // Trato
+  p({ id: 'tractLength', group: 'trato', label: 'Comprimento', labelEn: 'Length', hint: 'Tamanho do tubo: curto como um bico ou longo como um gigante. Vale a partir da próxima nota.', min: 0.4, max: 3, def: 1, unit: '%', curve: 'exp', digits: 0, display: 100 }),
+
   // Envelope de amplitude
   p({ id: 'attack', group: 'envelope', label: 'Ataque', labelEn: 'Attack', hint: 'Tempo para a voz chegar ao volume cheio.', min: 0.002, max: 3, def: 0.04, unit: 's', curve: 'exp', digits: 3 }),
   p({ id: 'decay', group: 'envelope', label: 'Queda', labelEn: 'Decay', hint: 'Tempo para cair até o nível de sustentação.', min: 0.005, max: 4, def: 0.3, unit: 's', curve: 'exp', digits: 3 }),
   p({ id: 'sustain', group: 'envelope', label: 'Sustentação', labelEn: 'Sustain', hint: 'Volume enquanto a tecla fica apertada.', min: 0, max: 1, def: 0.85, unit: '%', curve: 'lin', digits: 0, display: 100 }),
   p({ id: 'release', group: 'envelope', label: 'Soltura', labelEn: 'Release', hint: 'Tempo para a voz sumir depois de soltar a tecla.', min: 0.01, max: 6, def: 0.25, unit: 's', curve: 'exp', digits: 3 }),
   p({ id: 'glide', group: 'envelope', label: 'Glide', labelEn: 'Glide', hint: 'Escorregar de uma nota para outra quando tocadas ligadas.', min: 0, max: 1.5, def: 0.06, unit: 's', curve: 'sq', digits: 3 }),
+
+  // Envelope de pitch
+  p({ id: 'pitchAmt', group: 'pitch', label: 'Quantidade', labelEn: 'Amount', hint: 'Quanto o envelope empurra a nota, em semitons.', min: -24, max: 24, def: 0, unit: 'st', curve: 'lin', digits: 1 }),
+  p({ id: 'pitchAtk', group: 'pitch', label: 'Ataque', labelEn: 'Attack', hint: 'Tempo para a nota chegar ao pico do envelope.', min: 0.001, max: 2, def: 0.05, unit: 's', curve: 'exp', digits: 3 }),
+  p({ id: 'pitchDec', group: 'pitch', label: 'Queda', labelEn: 'Decay', hint: 'Tempo para a nota escorregar até o nível final.', min: 0.01, max: 4, def: 0.5, unit: 's', curve: 'exp', digits: 3 }),
+  p({ id: 'pitchSus', group: 'pitch', label: 'Final', labelEn: 'Sustain', hint: 'Onde a nota termina: acima, no tom, ou abaixo (negativo).', min: -1, max: 1, def: 0, unit: '%', curve: 'lin', digits: 0, display: 100 }),
 
   // Saída
   p({ id: 'volume', group: 'saida', label: 'Volume', labelEn: 'Volume', hint: 'Volume da voz.', min: 0, max: 1, def: 0.7, unit: '%', curve: 'sq', digits: 0, display: 100 }),
@@ -124,7 +137,7 @@ export function formatValue(def: ParamDef, physical: number): string {
   const s = v.toFixed(def.digits).replace('.', ',');
   if (def.unit === 's' && physical < 1) return `${Math.round(physical * 1000)} ms`;
   if (def.unit === 'Rd') return `Rd ${s}`;
-  if (def.unit === 'ct' && v > 0 && def.min < 0) return `+${s} ct`;
+  if ((def.unit === 'ct' || def.unit === 'st' || def.unit === '%') && v > 0 && def.min < 0) return `+${s} ${def.unit}`.replace(' %', '%');
   return `${s} ${def.unit}`.replace(' %', '%');
 }
 

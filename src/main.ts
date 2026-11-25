@@ -1,5 +1,6 @@
 import './styles/main.css';
-import { GROUP_LABELS, PARAM_INDEX, PARAMS, VOWELS, defaultNormalized, toNormalized, toPhysical, type ParamGroup, type ParamId } from './dsp/params';
+import { CREATURES, creatureNormalized, type CreatureId } from './dsp/creatures';
+import { GROUP_LABELS, PARAM_INDEX, PARAMS, VOWELS, toNormalized, toPhysical, type ParamGroup, type ParamId } from './dsp/params';
 import type { AnatomyShape } from './dsp/shape';
 import type { AudioBridge } from './audio';
 import './ui/knob';
@@ -11,8 +12,12 @@ import { VowelPad } from './ui/vowel-pad';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
+/** Criatura inicial: o gavião, a menos que a URL peça outra (?criatura=humano). */
+const askedCreature = new URLSearchParams(location.search).get('criatura');
+let creature: CreatureId = askedCreature === 'humano' ? 'humano' : 'gaviao';
+
 /** Estado da interface: valores normalizados na ordem de PARAMS. */
-const state = defaultNormalized();
+const state = creatureNormalized(creature);
 const knobs = new Map<number, GoelaKnob>();
 let bridge: AudioBridge | null = null;
 let waking: Promise<AudioBridge | null> | null = null;
@@ -30,7 +35,7 @@ const anatomy = (): AnatomyShape => ({
 
 // ---------- Painéis de knobs, gerados a partir das definições ----------
 
-const PANEL_GROUPS: ParamGroup[] = ['lingua', 'mandibula', 'labios', 'glote', 'envelope', 'saida'];
+const PANEL_GROUPS: ParamGroup[] = ['lingua', 'mandibula', 'labios', 'trato', 'glote', 'pitch', 'envelope', 'saida'];
 
 function buildPanels(): void {
   const host = $('#controls');
@@ -105,6 +110,25 @@ function markVowel(): void {
   }
 }
 
+// ---------- Criaturas ----------
+
+function applyCreature(id: CreatureId): void {
+  creature = id;
+  state.set(creatureNormalized(id));
+  for (const [i, k] of knobs) k.set(state[i]);
+  bridge?.send({ t: 'params', v: Array.from(state) });
+  view.setShape(anatomy());
+  view.setCreature(id);
+  pad.set(phys('tonguePos'), phys('tongueHeight'));
+  markVowel();
+  document.body.dataset.creature = id;
+  for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-creature]')) {
+    btn.setAttribute('aria-pressed', String(btn.dataset.creature === id));
+  }
+  $('#creature-blurb').textContent = CREATURES[id].blurb;
+  $('#wake-kicker').textContent = id === 'gaviao' ? 'O gavião está dormindo no poleiro' : 'A criatura está dormindo';
+}
+
 // ---------- Áudio sob demanda ----------
 
 async function wake(): Promise<AudioBridge | null> {
@@ -161,6 +185,11 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-vowel]')) 
   btn.addEventListener('click', () => goToVowel(btn.dataset.vowel as keyof typeof VOWELS));
 }
 markVowel();
+
+for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-creature]')) {
+  btn.addEventListener('click', () => applyCreature(btn.dataset.creature as CreatureId));
+}
+applyCreature(creature);
 
 const scope = new Scope($<HTMLCanvasElement>('#scope'));
 const noteOut = $('#note-out');

@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Goela: sintetizador de trato vocal online e gratuito</title>
-    <meta name="description" content="Goela é um sintetizador de voz que simula garganta, língua e lábios no navegador. Toque notas, forme vogais e crie vozes de criaturas. Grátis, sem instalar nada." />
+    <title>Goela: sintetizador de voz de gavião e trato vocal online</title>
+    <meta name="description" content="Goela é um sintetizador que simula garganta, língua e bico no navegador. Faça o grito de um gavião, forme vogais e crie vozes de criaturas. Grátis." />
     <meta name="theme-color" content="#f1ebe0" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#171411" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
@@ -54,7 +54,7 @@
         <div class="plate-head">
           <p class="plate-no">Prancha I · Voz única</p>
           <h1 id="titulo">Goela, um sintetizador de trato vocal</h1>
-          <p class="lede">Uma garganta de mentira que soa de verdade. Mexa a língua, abra a boca, aperte uma tecla e ouça a vogal mudar.</p>
+          <p class="lede">Uma garganta de mentira que soa de verdade. Hoje ela é um gavião: aperte uma tecla e ouça o grito subir e despencar. Mexa a língua e o bico para mudar o timbre.</p>
         </div>
 
         <div class="instrument">
@@ -62,13 +62,19 @@
             <button id="power" class="power" type="button" aria-pressed="false">
               <span class="power-dot" aria-hidden="true"></span><span class="power-text">Áudio desligado</span>
             </button>
+            <div class="creatures" role="group" aria-labelledby="criatura-rotulo">
+              <span id="criatura-rotulo" class="creatures-label">Criatura</span>
+              <button type="button" data-creature="gaviao" aria-pressed="true" aria-describedby="creature-blurb">Gavião</button>
+              <button type="button" data-creature="humano" aria-pressed="false" aria-describedby="creature-blurb">Humano</button>
+            </div>
+            <p id="creature-blurb" class="creature-blurb">Grito rouco e agudo que sobe e despenca. Segure a tecla.</p>
             <div class="meter" id="meter" aria-hidden="true"><span></span></div>
             <p class="readout"><span class="readout-k">Nota</span> <output id="note-out">–</output></p>
           </div>
 
           <figure class="specimen">
-            <canvas id="tract" role="img" aria-label="Corte do trato vocal: a faringe sobe a partir da glote, faz a curva atrás da boca e segue até os lábios. A largura acompanha a posição da língua, da mandíbula e dos lábios."></canvas>
-            <figcaption><span class="fig-no">Fig. 1</span> Corte do tubo vocal, da glote aos lábios. A largura de cada trecho é a que o som atravessa agora.</figcaption>
+            <canvas id="tract" role="img" aria-label="Corte do trato vocal dentro da cabeça da criatura: a faringe sobe pelo pescoço, faz a curva atrás da boca e segue até a saída. No gavião, a saída é um bico em gancho que abre com a mandíbula. A largura do tubo acompanha a língua, a mandíbula e os lábios."></canvas>
+            <figcaption><span class="fig-no">Fig. 1</span> Corte do tubo vocal, do fundo da garganta até a saída. A largura de cada trecho é a que o som atravessa agora.</figcaption>
           </figure>
 
           <section class="vowels" aria-labelledby="vogais-titulo">
@@ -99,7 +105,7 @@
 
           <div id="wake-screen" class="wake">
             <div class="wake-card">
-              <p class="wake-kicker">A criatura está dormindo</p>
+              <p id="wake-kicker" class="wake-kicker">O gavião está dormindo no poleiro</p>
               <button id="wake" class="wake-button" type="button">Acordar a criatura</button>
               <p class="wake-note">O navegador só deixa tocar som depois de um clique seu.</p>
               <p id="wake-status" class="wake-status" role="status" aria-live="polite"></p>
@@ -128,11 +134,15 @@
           </article>
         </div>
 
+        <h3>Por que um gavião?</h3>
+        <p>O grito de um gavião é agudo, rouco e cai de altura no fim: um "kiii-ahh". Para chegar perto disso, o Goela encurta o tubo para 42% do tamanho humano (um bico, não uma boca), sobe a nota duas oitavas, aperta a glote e soma rouquidão com fry, um sub-harmônico que alterna ciclos fortes e fracos. Um envelope de pitch faz a nota subir rápido e despencar abaixo de onde começou. Na ave de verdade o som nasce na siringe, no fundo do peito, e não numa glote, mas a física do tubo que molda o som é parecida.</p>
+
         <h3>O que já dá para fazer</h3>
         <ul>
+          <li>Trocar a criatura entre gavião e humano com um clique.</li>
           <li>Tocar uma voz pelo teclado na tela ou pelo teclado do computador, com glide entre notas ligadas.</li>
           <li>Formar as vogais A, E, I, O e U com um clique, ou passear entre elas no quadro vocálico.</li>
-          <li>Ajustar língua, mandíbula, lábios, tensão da glote, sopro, vibrato e envelope.</li>
+          <li>Ajustar língua, mandíbula, lábios, comprimento do trato, tensão da glote, sopro, fry, vibrato, transposição, envelope de volume e envelope de pitch.</li>
         </ul>
         <p class="prose-note">Em breve: nariz, saco vocal de sapo, 16 vozes, MIDI e MPE, modulação, mutação de criaturas e efeitos.</p>
       </section>

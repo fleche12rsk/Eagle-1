@@ -9,7 +9,9 @@
  * para que mudanças de forma não estalem.
  */
 
-export const MAX_SEGMENTS = 64;
+/** 44 segmentos = trato adulto (~17,5 cm); 300% de comprimento pede 132. */
+export const MAX_SEGMENTS = 132;
+export const MIN_SEGMENTS = 12;
 
 export interface TractParams {
   glottalReflection: number;
@@ -19,29 +21,41 @@ export interface TractParams {
 }
 
 export class Tract {
-  readonly n: number;
+  /** Número de segmentos ativos. */
+  n: number;
   private readonly R: Float64Array;
   private readonly L: Float64Array;
   private readonly k: Float64Array;
   private readonly kInc: Float64Array;
   private readonly kTo: Float64Array;
   /** Diâmetros atuais (suavizados). */
-  readonly diameter: Float32Array;
-  /** Diâmetros-alvo vindos da anatomia. */
-  readonly target: Float32Array;
+  diameter: Float32Array;
+  /** Diâmetros-alvo vindos da anatomia (vista com `n` posições). */
+  target: Float32Array;
+  private readonly diameterViews: Float32Array[] = [];
+  private readonly targetViews: Float32Array[] = [];
+  private readonly maxN: number;
   private lipLp = 0;
   private readonly lipCoef: number;
   private lipOut = 0;
 
   constructor(n: number, fs: number) {
+    const max = Math.max(n, MAX_SEGMENTS);
     this.n = n;
-    this.R = new Float64Array(n);
-    this.L = new Float64Array(n);
-    this.k = new Float64Array(n);
-    this.kInc = new Float64Array(n);
-    this.kTo = new Float64Array(n);
-    this.diameter = new Float32Array(n).fill(1.5);
-    this.target = new Float32Array(n).fill(1.5);
+    this.R = new Float64Array(max);
+    this.L = new Float64Array(max);
+    this.k = new Float64Array(max);
+    this.kInc = new Float64Array(max);
+    this.kTo = new Float64Array(max);
+    this.maxN = max;
+    const dBuf = new Float32Array(max).fill(1.5);
+    const tBuf = new Float32Array(max).fill(1.5);
+    for (let m = 0; m <= max; m++) {
+      this.diameterViews.push(dBuf.subarray(0, m));
+      this.targetViews.push(tBuf.subarray(0, m));
+    }
+    this.diameter = this.diameterViews[n];
+    this.target = this.targetViews[n];
     // Reflexão labial depende da frequência: graves voltam, agudos irradiam.
     this.lipCoef = 1 - Math.exp((-2 * Math.PI * 4000) / fs);
     this.snapToTarget();
@@ -52,6 +66,20 @@ export class Tract {
     this.L.fill(0);
     this.lipLp = 0;
     this.lipOut = 0;
+  }
+
+  /**
+   * Troca o comprimento do tubo. Zera as ondas, então só deve ser chamado com
+   * a voz em silêncio (início de nota). As views de cada tamanho foram criadas
+   * no construtor: aqui não há alocação.
+   */
+  setSegments(n: number): void {
+    const m = Math.min(this.maxN, Math.max(MIN_SEGMENTS, Math.round(n)));
+    if (m === this.n) return;
+    this.n = m;
+    this.diameter = this.diameterViews[m];
+    this.target = this.targetViews[m];
+    this.reset();
   }
 
   /** Copia o alvo direto para o estado atual (sem suavização). */

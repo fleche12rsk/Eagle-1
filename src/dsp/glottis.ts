@@ -90,6 +90,7 @@ export function newLfShape(): LfShape {
 
 export interface GlottisParams {
   rd: number;
+  fry: number;
   aspiration: number;
   jitter: number;
   shimmer: number;
@@ -106,6 +107,7 @@ export class Glottis {
   private t = 0;
   private cycleGain = 1;
   private cycleFreqMul = 1;
+  private oddCycle = false;
   private readonly rng: Rng;
   private readonly jitterNoise: SmoothNoise;
   private readonly shimmerNoise: SmoothNoise;
@@ -168,5 +170,13 @@ export class Glottis {
     this.cycleFreqMul = 1 + p.jitter * p.jitter * 0.03 * j;
     const sh = this.shimmerNoise.next(inc) * 0.5 + this.rng.bipolar() * 0.5;
     this.cycleGain = 1 - p.shimmer * p.shimmer * 0.45 * (0.5 + 0.5 * sh);
+
+    // Fry: ciclos alternados mais fracos e mais longos geram um sub-harmônico (f0/2).
+    this.oddCycle = !this.oddCycle;
+    if (p.fry > 0 && this.oddCycle) {
+      const f = p.fry * (0.8 + 0.4 * this.rng.next());
+      this.cycleGain *= 1 - 0.7 * f;
+      this.cycleFreqMul *= 1 - 0.18 * f;
+    }
   }
 }
