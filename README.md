@@ -1,4 +1,4 @@
-# Goela
+# bleh 3
 
 Sintetizador de trato vocal que roda no navegador. Uma fonte glotal LF excita um guia de onda Kelly-Lochbaum cujo formato sai de parâmetros anatômicos (língua, mandíbula, lábios).
 
@@ -15,4 +15,4 @@ npm run build   # build de produção em dist/
 
 O Pink Trombone (Neil Thapen, licença MIT) foi estudado como referência do algoritmo; o código aqui é próprio.
 
-© 2026 Goela. Todos os direitos reservados a [Micio](https://micio.dev/).
+© 2026 bleh 3. Todos os direitos reservados a [Micio](https://micio.dev/).

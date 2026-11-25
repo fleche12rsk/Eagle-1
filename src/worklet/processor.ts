@@ -1,5 +1,5 @@
 /**
- * AudioWorkletProcessor do Goela. Só embrulha o Engine: toda a síntese
+ * AudioWorkletProcessor do bleh 3. Só embrulha o Engine: toda a síntese
  * acontece ali, sem alocar memória dentro de process().
  */
 
