@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://fleche12rsk.github.io/Eagle-1/sitemap.xml

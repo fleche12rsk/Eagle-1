@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Goela: sintetizador de voz de gavião e trato vocal online</title>
+    <link rel="canonical" href="https://fleche12rsk.github.io/Eagle-1/" />
+    <meta property="og:url" content="https://fleche12rsk.github.io/Eagle-1/" />
+    <meta name="description" content="Goela é um sintetizador que simula garganta, bico e saco vocal no navegador. Faça o grito de um gavião, o arrulho de um pombo e vozes de criaturas. Grátis." />
+    <meta name="theme-color" content="#f1ebe0" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#171411" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="author" content="Micio" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content="Goela" />
+    <meta property="og:title" content="Goela: sintetizador de trato vocal no navegador" />
+    <meta property="og:description" content="Um modelo físico de garganta, língua e lábios que canta, coaxa e ruge. Toque direto no navegador." />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" href="/Eagle-1/favicon.svg" type="image/svg+xml" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Goela",
+        "description": "Sintetizador de trato vocal que roda no navegador: simula glote, faringe, língua e lábios para gerar vozes e vogais.",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Qualquer navegador moderno",
+        "inLanguage": "pt-BR",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" },
+        "url": "https://fleche12rsk.github.io/Eagle-1/",
+        "author": { "@type": "Person", "name": "Micio", "url": "https://micio.dev/" }
+      }
+    </script>
+    <script type="module" crossorigin src="/Eagle-1/assets/main-BT19FFzP.js"></script>
+    <link rel="stylesheet" crossorigin href="/Eagle-1/assets/main-C9KgF12i.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#sintetizador">Pular para o sintetizador</a>
+
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="Goela, página inicial">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M9 29V13c0-5 3-8 8-8h7"/><path d="M15 29V14c0-2 1-3 3-3h6"/><circle cx="27" cy="8" r="1.6"/></svg>
+        <span class="brand-name">Goela</span>
+      </a>
+      <nav class="site-nav" aria-label="Principal">
+        <ul>
+          <li><a href="#sintetizador">Sintetizador</a></li>
+          <li><a href="#como-funciona">Como funciona</a></li>
+          <li><a href="privacidade/">Privacidade</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <section id="sintetizador" class="plate" aria-labelledby="titulo">
+        <div class="plate-head">
+          <p class="plate-no">Prancha I · Voz única</p>
+          <h1 id="titulo">Goela, um sintetizador de trato vocal</h1>
+          <p class="lede">Uma garganta de mentira que soa de verdade. Hoje ela é um gavião: aperte uma tecla e ouça o grito subir e despencar. Mexa a língua e o bico para mudar o timbre.</p>
+        </div>
+
+        <div class="instrument">
+          <div class="toolbar">
+            <button id="power" class="power" type="button" aria-pressed="false">
+              <span class="power-dot" aria-hidden="true"></span><span class="power-text">Áudio desligado</span>
+            </button>
+            <div class="creatures" role="group" aria-labelledby="criatura-rotulo">
+              <span id="criatura-rotulo" class="creatures-label">Criatura</span>
+              <button type="button" data-creature="gaviao" aria-pressed="true" aria-describedby="creature-blurb">Gavião</button>
+              <button type="button" data-creature="pombo" aria-pressed="false" aria-describedby="creature-blurb">Pombo</button>
+              <button type="button" data-creature="humano" aria-pressed="false" aria-describedby="creature-blurb">Humano</button>
+            </div>
+            <p id="creature-blurb" class="creature-blurb">Grito rouco e agudo que sobe e despenca. Segure a tecla.</p>
+            <div class="meter" id="meter" aria-hidden="true"><span></span></div>
+            <p class="readout"><span class="readout-k">Nota</span> <output id="note-out">–</output></p>
+          </div>
+
+          <figure class="specimen">
+            <canvas id="tract" role="img" aria-label="Corte do trato vocal dentro da cabeça da criatura: a faringe sobe pelo pescoço, faz a curva atrás da boca e segue até a saída. No gavião, a saída é um bico em gancho que abre com a mandíbula. A largura do tubo acompanha a língua, a mandíbula e os lábios."></canvas>
+            <figcaption><span class="fig-no">Fig. 1</span> Corte do tubo vocal, do fundo da garganta até a saída. A largura de cada trecho é a que o som atravessa agora.</figcaption>
+          </figure>
+
+          <section class="vowels" aria-labelledby="vogais-titulo">
+            <h2 id="vogais-titulo" class="panel-title">Vogais</h2>
+            <div id="vowel-pad"></div>
+            <div class="vowel-buttons" role="group" aria-label="Vogais rápidas">
+              <button type="button" data-vowel="A" aria-pressed="false">A</button>
+              <button type="button" data-vowel="E" aria-pressed="false">E</button>
+              <button type="button" data-vowel="I" aria-pressed="false">I</button>
+              <button type="button" data-vowel="O" aria-pressed="false">O</button>
+              <button type="button" data-vowel="U" aria-pressed="false">U</button>
+            </div>
+          </section>
+
+          <section class="anatomy" aria-labelledby="anatomia-titulo">
+            <h2 id="anatomia-titulo" class="panel-title">Anatomia e fonte</h2>
+            <div id="controls" class="controls"></div>
+          </section>
+
+          <section class="play" aria-labelledby="tocar-titulo">
+            <div class="play-head">
+              <h2 id="tocar-titulo" class="panel-title">Tocar</h2>
+              <p class="play-help">Clique ou toque nas teclas. No computador, use a fileira <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>F</kbd>… e <kbd>Z</kbd> / <kbd>X</kbd> para mudar a oitava (agora em <output id="octave-out">Dó3</output>).</p>
+              <canvas id="scope" class="scope" aria-hidden="true"></canvas>
+            </div>
+            <div id="keyboard" class="keyboard" role="group" aria-label="Teclado musical"></div>
+          </section>
+
+          <div id="wake-screen" class="wake">
+            <div class="wake-card">
+              <p id="wake-kicker" class="wake-kicker">O gavião está dormindo no poleiro</p>
+              <button id="wake" class="wake-button" type="button">Acordar a criatura</button>
+              <p class="wake-note">O navegador só deixa tocar som depois de um clique seu.</p>
+              <p id="wake-status" class="wake-status" role="status" aria-live="polite"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="como-funciona" class="prose" aria-labelledby="como-titulo">
+        <h2 id="como-titulo">Como funciona um sintetizador de trato vocal</h2>
+        <p>Quando você fala, as pregas vocais abrem e fecham centenas de vezes por segundo. Cada pulso de ar entra num tubo que vai da garganta até a boca. O formato desse tubo reforça algumas frequências e apaga outras, e é isso que separa um <em>a</em> de um <em>i</em>.</p>
+        <p>O Goela refaz esse caminho com matemática, sem gravações. Tudo é calculado em tempo real, dentro do seu navegador.</p>
+
+        <div class="prose-cols">
+          <article>
+            <h3>A fonte: a glote</h3>
+            <p>O pulso de ar segue o modelo LF (Liljencrants-Fant), comandado por um único número, o Rd. Rd baixo soa apertado e metálico. Rd alto soa soproso. Somamos ruído de sopro no momento em que a glote está aberta, e pequenas instabilidades de altura e volume para a voz não soar robótica.</p>
+          </article>
+          <article>
+            <h3>O tubo: 44 fatias</h3>
+            <p>O trato vira uma fila de 44 cilindros curtos, num guia de onda do tipo Kelly-Lochbaum. Entre uma fatia e outra, parte da onda passa e parte volta, conforme a diferença de largura. A língua, a mandíbula e os lábios não são desenhados ponto a ponto: eles geram a curva de larguras.</p>
+          </article>
+          <article>
+            <h3>A saída: os lábios</h3>
+            <p>Na boca, os graves tendem a voltar para dentro e os agudos escapam. Por isso a reflexão nos lábios depende da frequência. O tubo roda com o dobro da taxa de amostragem, para ficar estável e soar mais limpo.</p>
+          </article>
+        </div>
+
+        <h3>Por que um gavião?</h3>
+        <p>O grito de um gavião é agudo, rouco e cai de altura no fim: um "kiii-ahh". Para chegar perto disso, o Goela encurta o tubo para 42% do tamanho humano (um bico, não uma boca), sobe a nota duas oitavas, aperta a glote e soma rouquidão com fry, um sub-harmônico que alterna ciclos fortes e fracos. Um envelope de pitch faz a nota subir rápido e despencar abaixo de onde começou. Na ave de verdade o som nasce na siringe, no fundo do peito, e não numa glote, mas a física do tubo que molda o som é parecida.</p>
+
+        <h3>E o pombo?</h3>
+        <p>O pombo arrulha de bico fechado. O ar enche o papo, uma bolsa no pescoço, e é a pele dessa bolsa que vibra e solta o "hu-rruu". No Goela isso é o saco vocal: um ressonador ligado a um ponto do tubo, com tamanho, elasticidade, amortecimento, posição e acoplamento. Ele soa por conta própria e também rouba energia do tubo na frequência dele. Feche o bico do pombo e tire o saco: sobra quase silêncio. Sapos e bugios usam o mesmo truque.</p>
+
+        <h3>O que já dá para fazer</h3>
+        <ul>
+          <li>Trocar a criatura entre gavião, pombo e humano com um clique.</li>
+          <li>Ligar um saco vocal em qualquer criatura e ver a bolsa inflar com o som.</li>
+          <li>Tocar uma voz pelo teclado na tela ou pelo teclado do computador, com glide entre notas ligadas.</li>
+          <li>Formar as vogais A, E, I, O e U com um clique, ou passear entre elas no quadro vocálico.</li>
+          <li>Ajustar língua, mandíbula, lábios, comprimento do trato, tensão da glote, sopro, fry, vibrato, transposição, envelope de volume e envelope de pitch.</li>
+        </ul>
+        <p class="prose-note">Em breve: nariz, 16 vozes, MIDI e MPE, modulação, mutação de criaturas e efeitos.</p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>© 2026 Goela. Todos os direitos reservados a <a href="https://micio.dev/">Micio</a>.</p>
+      <a href="privacidade/">Política de Privacidade</a>
+    </footer>
+  </body>
+</html>
